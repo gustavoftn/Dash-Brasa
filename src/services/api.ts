@@ -7,22 +7,26 @@ import type {
 const COMPETITION = 'BSA'
 const SEASON = 2026
 
-/** Token só é necessário no dev (proxy do Vite). Em produção o proxy da Vercel injeta o token no servidor. */
 const TOKEN = import.meta.env.VITE_FOOTBALL_DATA_TOKEN || ''
 
 async function fetchApi<T>(endpoint: string): Promise<T> {
   const headers: Record<string, string> = {
     Accept: 'application/json',
   }
-
-  // Em desenvolvimento o Vite encaminha /api → football-data.org e o token vai no header.
-  // Em produção a Edge Function em /api/[...path] usa FOOTBALL_DATA_TOKEN do servidor.
   if (TOKEN) {
     headers['X-Auth-Token'] = TOKEN
   }
 
-  const url = `/api/${endpoint}`
-  const res = await fetch(url, { headers })
+  // 1) /api/path... (catch-all)  2) fallback /api/proxy?path=...
+  const primary = `/api/${endpoint}`
+  let res = await fetch(primary, { headers })
+
+  if (res.status === 404) {
+    const [pathOnly, query = ''] = endpoint.split('?')
+    const qs = new URLSearchParams(query)
+    qs.set('path', pathOnly)
+    res = await fetch(`/api/proxy?${qs.toString()}`, { headers })
+  }
 
   if (!res.ok) {
     const text = await res.text().catch(() => '')
@@ -31,10 +35,10 @@ async function fetchApi<T>(endpoint: string): Promise<T> {
       const parsed = JSON.parse(text) as { error?: string; detail?: string }
       detail = parsed.detail || parsed.error || detail
     } catch {
-      // keep raw text
+      // raw
     }
     throw new Error(
-      `Erro HTTP ${res.status}: ${detail}. Verifique o token e o plano da API.`
+      `Erro HTTP ${res.status}: ${detail}. Verifique FOOTBALL_DATA_TOKEN nas Environment Variables da Vercel.`
     )
   }
 

@@ -1,7 +1,17 @@
 {
+  "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "framework": "vite",
+  "functions": {
+    "api/proxy.js": {
+      "memory": 256,
+      "maxDuration": 10
+    },
+    "api/[...path].js": {
+      "memory": 256,
+      "maxDuration": 10
+    }
+  },
   "rewrites": [
     {
       "source": "/((?!api/).*)",
