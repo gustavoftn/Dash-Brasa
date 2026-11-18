@@ -1,6 +1,6 @@
 /**
- * Football Data Dashboard
- * Tema claro · Favoritos · Gráficos · Trends
+ * KICKOFF · Football Data Dashboard
+ * Dark theme · Favorites · Charts · Trends
  */
 
 const API_BASE = "/api/football";
@@ -20,8 +20,26 @@ const modalBody = document.getElementById("modalBody");
 const favChip = document.getElementById("favChip");
 const favCrest = document.getElementById("favCrest");
 const favName = document.getElementById("favName");
+const favFallback = document.getElementById("favFallback");
+const dateLabel = document.getElementById("dateLabel");
+const greeting = document.getElementById("greeting");
 
-// ─── Favoritos ─────────────────────────────────────────────
+// ─── Date & greeting ───────────────────────────────
+
+function updateDateGreeting() {
+  const now = new Date();
+  const opts = { weekday: "long", day: "numeric", month: "short" };
+  dateLabel.textContent = now.toLocaleDateString("en-US", opts).toUpperCase();
+
+  const h = now.getHours();
+  let g = "Welcome back";
+  if (h < 12) g = "Good morning";
+  else if (h < 18) g = "Good afternoon";
+  else g = "Good evening";
+  greeting.textContent = g;
+}
+
+// ─── Favorites ─────────────────────────────────────
 
 function getFavorite() {
   try {
@@ -63,8 +81,10 @@ function renderFavChip() {
   if (f.crest) {
     favCrest.src = f.crest;
     favCrest.hidden = false;
+    favFallback.hidden = true;
   } else {
     favCrest.hidden = true;
+    favFallback.hidden = false;
   }
 }
 
@@ -78,7 +98,7 @@ favChip.addEventListener("click", () => {
   if (f) showTeam(f.id);
 });
 
-// ─── Helpers ───────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────
 
 function destroyCharts() {
   chartInstances.forEach((c) => {
@@ -97,7 +117,7 @@ function setStatus(msg, loading = false) {
 function showError(msg) {
   destroyCharts();
   content.innerHTML = `<div class="error">${msg}</div>`;
-  setStatus("Erro");
+  setStatus("Error");
 }
 
 async function api(params = {}) {
@@ -109,7 +129,7 @@ async function api(params = {}) {
     return cache[key].data;
   }
 
-  setStatus("Carregando…", true);
+  setStatus("Loading…", true);
   try {
     const res = await fetch(url);
     let data;
@@ -117,7 +137,7 @@ async function api(params = {}) {
       data = await res.json();
     } catch {
       throw new Error(
-        `Resposta inválida do servidor (HTTP ${res.status}). Verifique se /api/football está deployado.`
+        `Invalid server response (HTTP ${res.status}). Check if /api/football is deployed.`
       );
     }
 
@@ -132,10 +152,10 @@ async function api(params = {}) {
     }
 
     cache[key] = { data, ts: Date.now() };
-    setStatus("Pronto");
+    setStatus("Ready");
     return data;
   } catch (err) {
-    setStatus("Erro na requisição");
+    setStatus("Request error");
     throw err;
   }
 }
@@ -160,20 +180,20 @@ function statusBadge(status) {
   if (!status) return "";
   const s = status.toLowerCase();
   const labels = {
-    finished: "Finalizado",
-    scheduled: "Agendado",
-    timed: "Agendado",
-    in_play: "Ao vivo",
-    paused: "Intervalo",
-    postponed: "Adiado",
-    cancelled: "Cancelado",
+    finished: "Finished",
+    scheduled: "Scheduled",
+    timed: "Scheduled",
+    in_play: "Live",
+    paused: "HT",
+    postponed: "Postponed",
+    cancelled: "Cancelled",
   };
   return `<span class="status-badge ${s}">${labels[s] || status}</span>`;
 }
 
 function heartBtn(teamId, extraClass = "") {
   const active = isFavorite(teamId) ? "active" : "";
-  return `<button type="button" class="btn-heart ${active} ${extraClass}" data-fav-id="${teamId}" title="Time do coração">♥</button>`;
+  return `<button type="button" class="btn-heart ${active} ${extraClass}" data-fav-id="${teamId}" title="Favorite team">♥</button>`;
 }
 
 function openModal(html) {
@@ -209,9 +229,9 @@ function bindHeartButtons(root = document) {
   });
 }
 
-// ─── Chart helpers ─────────────────────────────────────────
+// ─── Chart helpers ─────────────────────────────────
 
-function makeBarChart(canvasId, labels, values, label, color = "#1a73e8") {
+function makeBarChart(canvasId, labels, values, label, color = "#a3e635") {
   const ctx = document.getElementById(canvasId);
   if (!ctx || typeof Chart === "undefined") return;
 
@@ -235,18 +255,20 @@ function makeBarChart(canvasId, labels, values, label, color = "#1a73e8") {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: "#1e293b",
+          backgroundColor: "#1a2029",
           titleFont: { size: 12 },
           bodyFont: { size: 12 },
           padding: 10,
           cornerRadius: 8,
+          borderColor: "rgba(255,255,255,0.08)",
+          borderWidth: 1,
         },
       },
       scales: {
         x: {
           grid: { display: false },
           ticks: {
-            color: "#64748b",
+            color: "#8b95a5",
             font: { size: 10 },
             maxRotation: 45,
             minRotation: 0,
@@ -254,8 +276,8 @@ function makeBarChart(canvasId, labels, values, label, color = "#1a73e8") {
         },
         y: {
           beginAtZero: true,
-          grid: { color: "#e2e8f0" },
-          ticks: { color: "#64748b", font: { size: 11 }, precision: 0 },
+          grid: { color: "rgba(255,255,255,0.05)" },
+          ticks: { color: "#8b95a5", font: { size: 11 }, precision: 0 },
         },
       },
     },
@@ -264,27 +286,88 @@ function makeBarChart(canvasId, labels, values, label, color = "#1a73e8") {
   return chart;
 }
 
-// ─── Renderers ─────────────────────────────────────────────
+// ─── Renderers ─────────────────────────────────────
 
 function renderStandings(data) {
   destroyCharts();
   const tables = data.standings || [];
   if (!tables.length) {
-    content.innerHTML = `<div class="empty">Nenhuma tabela disponível.</div>`;
+    content.innerHTML = `<div class="empty">No standings available.</div>`;
     return;
   }
 
   const total = tables.find((t) => t.type === "TOTAL") || tables[0];
   const rows = total.table || [];
-
-  // Top 10 para o gráfico de pontos
   const top = rows.slice(0, 10);
   const chartLabels = top.map((r) => r.team.shortName || r.team.name || "?");
   const chartPoints = top.map((r) => r.points);
 
+  // Derive simple stats from table
+  const leader = rows[0];
+  const totalGoals = rows.reduce((s, r) => s + (r.goalsFor || 0), 0);
+  const totalPlayed = rows.reduce((s, r) => s + (r.playedGames || 0), 0);
+  const totalWins = rows.reduce((s, r) => s + (r.won || 0), 0);
+  const winRate = totalPlayed ? Math.round((totalWins / totalPlayed) * 100) : 0;
+
   let html = `
+    <div class="hero-card">
+      <div class="hero-content">
+        <div class="hero-badge">${data.competition?.name || "League"}</div>
+        <div class="hero-title">Every match is a<br><span>new opportunity.</span></div>
+        <div class="hero-meta">${data.season?.startDate?.slice(0, 4) || ""} season · ${rows.length} teams</div>
+        ${
+          leader
+            ? `<div class="hero-match">
+                <div class="hero-team">
+                  <div class="hero-team-badge home">${(leader.team.tla || leader.team.shortName || "?").slice(0, 3)}</div>
+                  <span>${leader.team.shortName || leader.team.name}</span>
+                </div>
+                <span class="hero-vs">leads the table</span>
+              </div>`
+            : ""
+        }
+      </div>
+      <div class="hero-visual"></div>
+      <div class="hero-countdown">01 · 00 · 00</div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">
+          <span class="stat-icon green">🏆</span>
+          League position
+        </div>
+        <div class="stat-value">1st</div>
+        <div class="stat-delta up">Leader · ${leader?.team?.shortName || "—"}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">
+          <span class="stat-icon purple">⚽</span>
+          Goals scored
+        </div>
+        <div class="stat-value">${totalGoals}</div>
+        <div class="stat-delta neutral">Across ${rows.length} teams</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">
+          <span class="stat-icon yellow">📊</span>
+          Win rate
+        </div>
+        <div class="stat-value">${winRate}%</div>
+        <div class="stat-delta neutral">League average</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">
+          <span class="stat-icon blue">👥</span>
+          Teams
+        </div>
+        <div class="stat-value">${rows.length}</div>
+        <div class="stat-delta neutral">In competition</div>
+      </div>
+    </div>
+
     <div class="card">
-      <h2>${data.competition?.name || "Tabela"} · ${data.season?.startDate?.slice(0, 4) || ""}</h2>
+      <h2>Table · ${data.competition?.name || ""} · ${data.season?.startDate?.slice(0, 4) || ""}</h2>
       <div class="chart-box">
         <canvas id="chartPoints"></canvas>
       </div>
@@ -293,14 +376,14 @@ function renderStandings(data) {
           <thead>
             <tr>
               <th>#</th>
-              <th>Time</th>
-              <th>J</th>
-              <th>V</th>
-              <th>E</th>
+              <th>Team</th>
+              <th>P</th>
+              <th>W</th>
               <th>D</th>
-              <th>GP</th>
-              <th>GC</th>
-              <th>SG</th>
+              <th>L</th>
+              <th>GF</th>
+              <th>GA</th>
+              <th>GD</th>
               <th>Pts</th>
               <th></th>
             </tr>
@@ -334,7 +417,7 @@ function renderStandings(data) {
   html += `</tbody></table></div></div>`;
   content.innerHTML = html;
 
-  makeBarChart("chartPoints", chartLabels, chartPoints, "Pontos");
+  makeBarChart("chartPoints", chartLabels, chartPoints, "Points");
 
   content.querySelectorAll("[data-team-id]").forEach((row) => {
     row.addEventListener("click", (e) => {
@@ -349,7 +432,7 @@ function renderScorers(data) {
   destroyCharts();
   const scorers = data.scorers || [];
   if (!scorers.length) {
-    content.innerHTML = `<div class="empty">Nenhum artilheiro encontrado.</div>`;
+    content.innerHTML = `<div class="empty">No scorers found.</div>`;
     return;
   }
 
@@ -359,7 +442,7 @@ function renderScorers(data) {
 
   let html = `
     <div class="card">
-      <h2>Artilharia · ${data.competition?.name || ""}</h2>
+      <h2>Top Scorers · ${data.competition?.name || ""}</h2>
       <div class="chart-box">
         <canvas id="chartGoals"></canvas>
       </div>
@@ -381,7 +464,7 @@ function renderScorers(data) {
   html += `</div>`;
   content.innerHTML = html;
 
-  makeBarChart("chartGoals", labels, goals, "Gols", "#16a34a");
+  makeBarChart("chartGoals", labels, goals, "Goals", "#22c55e");
 
   content.querySelectorAll("[data-person-id]").forEach((el) => {
     if (el.dataset.personId) {
@@ -390,11 +473,11 @@ function renderScorers(data) {
   });
 }
 
-function renderMatches(data, title = "Jogos") {
+function renderMatches(data, title = "Matches") {
   destroyCharts();
   const matches = data.matches || [];
   if (!matches.length) {
-    content.innerHTML = `<div class="empty">Nenhum jogo encontrado.</div>`;
+    content.innerHTML = `<div class="empty">No matches found.</div>`;
     return;
   }
 
@@ -402,10 +485,10 @@ function renderMatches(data, title = "Jogos") {
     <div class="card">
       <h2>${title}</h2>
       <div class="filters" id="matchFilters">
-        <button data-status="SCHEDULED,TIMED" class="active">Próximos</button>
-        <button data-status="FINISHED">Finalizados</button>
-        <button data-status="IN_PLAY,PAUSED">Ao vivo</button>
-        <button data-status="">Todos</button>
+        <button data-status="SCHEDULED,TIMED" class="active">Upcoming</button>
+        <button data-status="FINISHED">Finished</button>
+        <button data-status="IN_PLAY,PAUSED">Live</button>
+        <button data-status="">All</button>
       </div>
       <div class="match-list" id="matchList">
   `;
@@ -431,7 +514,7 @@ function renderMatches(data, title = "Jogos") {
         </div>
         <div class="match-meta">
           ${formatDate(m.utcDate)} · ${statusBadge(m.status)}
-          ${m.matchday ? ` · Rodada ${m.matchday}` : ""}
+          ${m.matchday ? ` · MD ${m.matchday}` : ""}
         </div>
       </div>
     `;
@@ -465,13 +548,13 @@ function renderTeams(data) {
   destroyCharts();
   const teams = data.teams || [];
   if (!teams.length) {
-    content.innerHTML = `<div class="empty">Nenhum time encontrado.</div>`;
+    content.innerHTML = `<div class="empty">No teams found.</div>`;
     return;
   }
 
   let html = `
     <div class="card">
-      <h2>Times · ${data.competition?.name || ""}</h2>
+      <h2>Squads · ${data.competition?.name || ""}</h2>
       <div class="teams-grid">
   `;
 
@@ -506,13 +589,12 @@ function renderTrends(data) {
   if (!trends.length) {
     content.innerHTML = `
       <div class="empty">
-        Nenhum dado de forma recente disponível no momento.<br>
-        <span style="font-size:0.85rem">A API de trends depende de jogos recentes nas competições do seu plano.</span>
+        No recent form data available right now.<br>
+        <span style="font-size:0.85rem">Trends depend on recent matches in your plan competitions.</span>
       </div>`;
     return;
   }
 
-  // Agregar média de pontos / gols dos times que aparecem
   const teamStats = {};
   trends.forEach((t) => {
     const home = t.homeTeam || t.home;
@@ -547,7 +629,6 @@ function renderTrends(data) {
     }
   });
 
-  // Gráfico: top times por média de pontos
   const sorted = Object.values(teamStats)
     .map((t) => ({
       ...t,
@@ -558,9 +639,9 @@ function renderTrends(data) {
 
   let html = `
     <div class="card">
-      <h2>Forma recente</h2>
+      <h2>Recent form</h2>
       <p style="font-size:0.82rem;color:var(--text-muted);margin:-0.5rem 0 1rem">
-        Média de pontos e sequência (W=vitória, D=empate, L=derrota) nas últimas partidas.
+        Average points and sequence (W=win, D=draw, L=loss) in recent matches.
       </p>
   `;
 
@@ -594,15 +675,15 @@ function renderTrends(data) {
             ${crest(away.crest)}
           </div>
           <div style="display:flex;gap:0.75rem;align-items:center">
-            <div class="form-pills" title="Forma mandante">${homePills || "—"}</div>
-            <div class="form-pills" title="Forma visitante">${awayPills || "—"}</div>
+            <div class="form-pills" title="Home form">${homePills || "—"}</div>
+            <div class="form-pills" title="Away form">${awayPills || "—"}</div>
           </div>
         </div>
         <div class="trend-stats">
-          <span>Pts méd. casa: <strong>${home.avg_points != null ? home.avg_points.toFixed(1) : "—"}</strong></span>
-          <span>Pts méd. fora: <strong>${away.avg_points != null ? away.avg_points.toFixed(1) : "—"}</strong></span>
-          <span>Gols méd. casa: <strong>${home.avg_goals_scored != null ? home.avg_goals_scored.toFixed(1) : "—"}</strong></span>
-          <span>Gols méd. fora: <strong>${away.avg_goals_scored != null ? away.avg_goals_scored.toFixed(1) : "—"}</strong></span>
+          <span>Avg pts home: <strong>${home.avg_points != null ? home.avg_points.toFixed(1) : "—"}</strong></span>
+          <span>Avg pts away: <strong>${away.avg_points != null ? away.avg_points.toFixed(1) : "—"}</strong></span>
+          <span>Avg goals home: <strong>${home.avg_goals_scored != null ? home.avg_goals_scored.toFixed(1) : "—"}</strong></span>
+          <span>Avg goals away: <strong>${away.avg_goals_scored != null ? away.avg_goals_scored.toFixed(1) : "—"}</strong></span>
           ${t.competition?.name ? `<span>${t.competition.name}</span>` : ""}
         </div>
       </div>
@@ -617,8 +698,8 @@ function renderTrends(data) {
       "chartForm",
       sorted.map((t) => t.name),
       sorted.map((t) => +t.pts.toFixed(2)),
-      "Média de pontos",
-      "#1a73e8"
+      "Avg points",
+      "#a3e635"
     );
   }
 }
@@ -627,18 +708,18 @@ function renderToday(data) {
   destroyCharts();
   const matches = data.matches || [];
   if (!matches.length) {
-    content.innerHTML = `<div class="empty">Nenhum jogo hoje nas competições do plano.</div>`;
+    content.innerHTML = `<div class="empty">No matches today in plan competitions.</div>`;
     return;
   }
 
   const byComp = {};
   matches.forEach((m) => {
-    const code = m.competition?.code || m.competition?.name || "Outros";
+    const code = m.competition?.code || m.competition?.name || "Other";
     if (!byComp[code]) byComp[code] = [];
     byComp[code].push(m);
   });
 
-  let html = `<div class="card"><h2>Jogos de hoje</h2>`;
+  let html = `<div class="card"><h2>Today's matches</h2>`;
 
   Object.entries(byComp).forEach(([, list]) => {
     html += `<h3>${list[0].competition?.name || "—"}</h3><div class="match-list">`;
@@ -673,20 +754,20 @@ function renderSearch() {
   destroyCharts();
   content.innerHTML = `
     <div class="card">
-      <h2>Busca avançada</h2>
+      <h2>Advanced search</h2>
       <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem">
-        Use o ID numérico do time, partida ou jogador (aparece ao clicar nas outras abas).
+        Use the numeric ID of a team, match or player (visible when clicking other tabs).
       </p>
       <form class="search-form" id="searchForm">
         <select id="searchType">
-          <option value="team">Time (ID)</option>
-          <option value="match">Partida (ID)</option>
-          <option value="person">Jogador (ID)</option>
-          <option value="teamMatches">Jogos de um time</option>
-          <option value="head2head">Head-to-Head (ID da partida)</option>
+          <option value="team">Team (ID)</option>
+          <option value="match">Match (ID)</option>
+          <option value="person">Player (ID)</option>
+          <option value="teamMatches">Team matches</option>
+          <option value="head2head">Head-to-Head (match ID)</option>
         </select>
-        <input type="text" id="searchId" placeholder="Ex: 86 (Real Madrid)" required />
-        <button type="submit">Buscar</button>
+        <input type="text" id="searchId" placeholder="e.g. 86 (Real Madrid)" required />
+        <button type="submit">Search</button>
       </form>
       <div id="searchResult"></div>
     </div>
@@ -707,7 +788,7 @@ function renderSearch() {
       else if (type === "person") await showPerson(id);
       else if (type === "teamMatches") {
         const data = await api({ type: "teamMatches", id, status: "SCHEDULED,FINISHED", limit: 20 });
-        resultEl.innerHTML = `<h3>Últimos / próximos jogos</h3>`;
+        resultEl.innerHTML = `<h3>Recent / upcoming matches</h3>`;
         const list = document.createElement("div");
         list.className = "match-list";
         (data.matches || []).forEach((m) => {
@@ -756,7 +837,7 @@ function renderSearch() {
   });
 }
 
-// ─── Detalhes (modal) ──────────────────────────────────────
+// ─── Details (modal) ───────────────────────────────
 
 async function showTeam(id) {
   try {
@@ -766,7 +847,7 @@ async function showTeam(id) {
     let squadHtml = "";
     if (t.squad?.length) {
       squadHtml = `
-        <h3>Elenco (${t.squad.length})</h3>
+        <h3>Squad (${t.squad.length})</h3>
         <div class="squad-list">
           ${t.squad
             .map(
@@ -787,19 +868,19 @@ async function showTeam(id) {
         ${crest(t.crest, t.name)}
         <div>
           <h2>${t.name}</h2>
-          <div class="detail-meta">${t.area?.name || ""} · Fundado ${t.founded || "—"}</div>
+          <div class="detail-meta">${t.area?.name || ""} · Founded ${t.founded || "—"}</div>
         </div>
       </div>
       <div class="detail-grid">
-        <div class="detail-item"><div class="label">Estádio</div><div class="value">${t.venue || "—"}</div></div>
-        <div class="detail-item"><div class="label">Cores</div><div class="value">${t.clubColors || "—"}</div></div>
-        <div class="detail-item"><div class="label">Técnico</div><div class="value">${t.coach?.name || "—"}</div></div>
-        <div class="detail-item"><div class="label">Site</div><div class="value">${t.website ? `<a href="${t.website}" target="_blank" rel="noopener" style="color:var(--accent)">Link</a>` : "—"}</div></div>
+        <div class="detail-item"><div class="label">Stadium</div><div class="value">${t.venue || "—"}</div></div>
+        <div class="detail-item"><div class="label">Colors</div><div class="value">${t.clubColors || "—"}</div></div>
+        <div class="detail-item"><div class="label">Coach</div><div class="value">${t.coach?.name || "—"}</div></div>
+        <div class="detail-item"><div class="label">Website</div><div class="value">${t.website ? `<a href="${t.website}" target="_blank" rel="noopener" style="color:var(--accent)">Link</a>` : "—"}</div></div>
       </div>
       ${squadHtml}
       <div class="modal-actions">
-        <button class="btn-primary" id="btnTeamMatches">Ver jogos</button>
-        <button class="btn-outline" id="btnToggleFav">${favActive ? "♥ Remover favorito" : "♡ Time do coração"}</button>
+        <button class="btn-primary" id="btnTeamMatches">View matches</button>
+        <button class="btn-outline" id="btnToggleFav">${favActive ? "♥ Remove favorite" : "♡ Favorite team"}</button>
       </div>
     `);
 
@@ -814,9 +895,11 @@ async function showTeam(id) {
       closeModal();
       try {
         const m = await api({ type: "teamMatches", id, limit: 15 });
-        renderMatches({ matches: m.matches }, `Jogos · ${t.shortName || t.name}`);
+        renderMatches({ matches: m.matches }, `Matches · ${t.shortName || t.name}`);
         currentTab = "matches";
-        document.querySelectorAll(".tab").forEach((tb) => tb.classList.toggle("active", tb.dataset.tab === "matches"));
+        document.querySelectorAll(".nav-item[data-tab]").forEach((tb) =>
+          tb.classList.toggle("active", tb.dataset.tab === "matches")
+        );
       } catch (e) {
         showError(e.message);
       }
@@ -825,10 +908,10 @@ async function showTeam(id) {
     document.getElementById("btnToggleFav")?.addEventListener("click", () => {
       if (isFavorite(t.id)) {
         setFavorite(null);
-        document.getElementById("btnToggleFav").textContent = "♡ Time do coração";
+        document.getElementById("btnToggleFav").textContent = "♡ Favorite team";
       } else {
         setFavorite(t);
-        document.getElementById("btnToggleFav").textContent = "♥ Remover favorito";
+        document.getElementById("btnToggleFav").textContent = "♥ Remove favorite";
       }
     });
   } catch (e) {
@@ -859,13 +942,13 @@ async function showMatch(id) {
           </div>
         </div>
         ${statusBadge(m.status)}
-        ${m.matchday ? `<span style="margin-left:0.5rem;font-size:0.8rem;color:var(--text-muted)">Rodada ${m.matchday}</span>` : ""}
+        ${m.matchday ? `<span style="margin-left:0.5rem;font-size:0.8rem;color:var(--text-muted)">MD ${m.matchday}</span>` : ""}
       </div>
       <div class="detail-grid">
-        <div class="detail-item"><div class="label">Estádio</div><div class="value">${m.venue || "—"}</div></div>
-        <div class="detail-item"><div class="label">Árbitro</div><div class="value">${m.referees?.[0]?.name || "—"}</div></div>
+        <div class="detail-item"><div class="label">Venue</div><div class="value">${m.venue || "—"}</div></div>
+        <div class="detail-item"><div class="label">Referee</div><div class="value">${m.referees?.[0]?.name || "—"}</div></div>
       </div>
-      <button class="btn-primary" id="btnH2H">Ver Head-to-Head</button>
+      <button class="btn-primary" id="btnH2H">View Head-to-Head</button>
     `);
 
     document.getElementById("btnH2H")?.addEventListener("click", async () => {
@@ -882,7 +965,7 @@ async function showMatch(id) {
             </div>`;
           })
           .join("");
-        modalBody.innerHTML += `<h3 style="margin:1.25rem 0 0.5rem">Confrontos anteriores</h3>${list || "<p class='empty'>Sem histórico</p>"}`;
+        modalBody.innerHTML += `<h3 style="margin:1.25rem 0 0.5rem">Previous meetings</h3>${list || "<p class='empty'>No history</p>"}`;
       } catch (e) {
         modalBody.innerHTML += `<div class="error">${e.message}</div>`;
       }
@@ -904,12 +987,12 @@ async function showPerson(id) {
         </div>
       </div>
       <div class="detail-grid">
-        <div class="detail-item"><div class="label">Nascimento</div><div class="value">${p.dateOfBirth || "—"}</div></div>
-        <div class="detail-item"><div class="label">Camisa</div><div class="value">${p.shirtNumber ?? "—"}</div></div>
-        <div class="detail-item"><div class="label">Time atual</div><div class="value">${p.currentTeam?.name || "—"}</div></div>
-        <div class="detail-item"><div class="label">Atualizado</div><div class="value">${formatDate(p.lastUpdated)}</div></div>
+        <div class="detail-item"><div class="label">Born</div><div class="value">${p.dateOfBirth || "—"}</div></div>
+        <div class="detail-item"><div class="label">Shirt</div><div class="value">${p.shirtNumber ?? "—"}</div></div>
+        <div class="detail-item"><div class="label">Current team</div><div class="value">${p.currentTeam?.name || "—"}</div></div>
+        <div class="detail-item"><div class="label">Updated</div><div class="value">${formatDate(p.lastUpdated)}</div></div>
       </div>
-      <button class="btn-primary" id="btnPersonMatches">Ver partidas</button>
+      <button class="btn-primary" id="btnPersonMatches">View matches</button>
     `);
 
     document.getElementById("btnPersonMatches")?.addEventListener("click", async () => {
@@ -927,12 +1010,12 @@ async function showPerson(id) {
           })
           .join("");
         modalBody.innerHTML += `
-          <h3 style="margin:1.25rem 0 0.5rem">Últimas partidas</h3>
-          ${list || "<p class='empty'>Sem dados</p>"}
+          <h3 style="margin:1.25rem 0 0.5rem">Recent matches</h3>
+          ${list || "<p class='empty'>No data</p>"}
           ${
             m.aggregations
               ? `<p style="margin-top:0.75rem;font-size:0.8rem;color:var(--text-muted)">
-            Gols: ${m.aggregations.goals ?? 0} · Assistências: ${m.aggregations.assists ?? 0} · Minutos: ${m.aggregations.minutesPlayed ?? 0}
+            Goals: ${m.aggregations.goals ?? 0} · Assists: ${m.aggregations.assists ?? 0} · Minutes: ${m.aggregations.minutesPlayed ?? 0}
           </p>`
               : ""
           }
@@ -946,11 +1029,13 @@ async function showPerson(id) {
   }
 }
 
-// ─── Navegação ─────────────────────────────────────────────
+// ─── Navigation ────────────────────────────────────
 
 async function loadTab(tab) {
   currentTab = tab;
-  document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === tab));
+  document.querySelectorAll(".nav-item[data-tab]").forEach((t) =>
+    t.classList.toggle("active", t.dataset.tab === tab)
+  );
 
   try {
     if (tab === "standings") {
@@ -961,7 +1046,7 @@ async function loadTab(tab) {
       renderScorers(data);
     } else if (tab === "matches") {
       const data = await api({ type: "matches", comp: currentComp, status: "SCHEDULED,TIMED" });
-      renderMatches(data, `Jogos · ${compSelect.options[compSelect.selectedIndex].text}`);
+      renderMatches(data, `Matches · ${compSelect.options[compSelect.selectedIndex].text}`);
     } else if (tab === "teams") {
       const data = await api({ type: "teams", comp: currentComp });
       renderTeams(data);
@@ -973,15 +1058,15 @@ async function loadTab(tab) {
       renderToday(data);
     } else if (tab === "search") {
       renderSearch();
-      setStatus("Pronto");
+      setStatus("Ready");
     }
   } catch (err) {
-    showError(err.message || "Falha ao carregar dados.");
+    showError(err.message || "Failed to load data.");
   }
 }
 
 document.getElementById("mainTabs").addEventListener("click", (e) => {
-  const btn = e.target.closest(".tab");
+  const btn = e.target.closest(".nav-item[data-tab]");
   if (btn?.dataset.tab) loadTab(btn.dataset.tab);
 });
 
@@ -999,5 +1084,108 @@ document.addEventListener("keydown", (e) => {
 });
 
 // Init
+updateDateGreeting();
 renderFavChip();
 loadTab("standings");
+
+
+// ─── Header controls ───────────────────────────────
+
+// Search accepts a numeric Football-Data ID and opens the existing search screen.
+const globalSearch = document.getElementById("globalSearch");
+if (globalSearch) {
+  globalSearch.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    const value = globalSearch.value.trim();
+    loadTab("search");
+    // renderSearch is synchronous, so its form exists immediately after loadTab starts.
+    requestAnimationFrame(() => {
+      const searchId = document.getElementById("searchId");
+      const searchForm = document.getElementById("searchForm");
+      if (!searchId || !searchForm) return;
+      searchId.value = value;
+      if (value) searchForm.requestSubmit();
+      else searchId.focus();
+    });
+  });
+}
+
+// Theme toggle: the selected theme is saved in this browser.
+const themeToggle = document.getElementById("themeToggle");
+function applySavedTheme() {
+  const light = localStorage.getItem("fd_theme") === "light";
+  document.body.classList.toggle("light-theme", light);
+  if (themeToggle) themeToggle.setAttribute("aria-pressed", String(light));
+}
+if (themeToggle) {
+  applySavedTheme();
+  themeToggle.addEventListener("click", () => {
+    const light = !document.body.classList.contains("light-theme");
+    document.body.classList.toggle("light-theme", light);
+    localStorage.setItem("fd_theme", light ? "light" : "dark");
+    themeToggle.setAttribute("aria-pressed", String(light));
+  });
+}
+
+// Settings opens a working panel with refresh and favorite-management actions.
+const settingsButton = document.querySelector(".settings-btn");
+if (settingsButton) {
+  settingsButton.addEventListener("click", () => {
+    const favorite = getFavorite();
+    openModal(`
+      <div class="settings-panel">
+        <h2>Configurações</h2>
+        <p class="detail-meta">Preferências do dashboard KICKOFF.</p>
+        <div class="detail-item" style="margin:1rem 0">
+          <div class="label">Competição selecionada</div>
+          <div class="value">${compSelect.options[compSelect.selectedIndex].text}</div>
+        </div>
+        <div class="detail-item" style="margin:1rem 0">
+          <div class="label">Time favorito</div>
+          <div class="value">${favorite ? favorite.name : "Nenhum time selecionado"}</div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-primary" id="settingsRefresh">Atualizar dados</button>
+          <button type="button" class="btn-outline" id="settingsClearFavorite">Remover favorito</button>
+        </div>
+      </div>
+    `);
+    document.getElementById("settingsRefresh").addEventListener("click", () => {
+      cache = {};
+      closeModal();
+      loadTab(currentTab);
+    });
+    document.getElementById("settingsClearFavorite").addEventListener("click", () => {
+      setFavorite(null);
+      closeModal();
+    });
+  });
+}
+
+// Notifications button shows today's fixtures from the same API used by the Today tab.
+const notificationsButton = document.getElementById("notificationsBtn");
+if (notificationsButton) {
+  notificationsButton.addEventListener("click", async () => {
+    openModal('<h2>Partidas de hoje</h2><p class="detail-meta">Carregando partidas…</p>');
+    try {
+      const data = await api({ type: "matchesToday" });
+      const matches = data.matches || [];
+      const list = matches.length
+        ? matches.map((m) => `
+            <div class="notification-match">
+              <strong>${m.homeTeam?.shortName || m.homeTeam?.name || "—"}</strong>
+              <span>${m.status === "FINISHED" || m.status === "IN_PLAY" || m.status === "PAUSED"
+                ? `${m.score?.fullTime?.home ?? "–"} × ${m.score?.fullTime?.away ?? "–"}`
+                : "vs"}</span>
+              <strong>${m.awayTeam?.shortName || m.awayTeam?.name || "—"}</strong>
+              <small>${m.competition?.name || ""} · ${formatDate(m.utcDate)}</small>
+            </div>
+          `).join("")
+        : '<p class="empty">Nenhuma partida encontrada para hoje nas competições disponíveis.</p>';
+      modalBody.innerHTML = `<h2>Partidas de hoje</h2><p class="detail-meta">${matches.length} partida(s) encontrada(s)</p>${list}`;
+    } catch (error) {
+      modalBody.innerHTML = `<h2>Partidas de hoje</h2><div class="error">${error.message}</div>`;
+    }
+  });
+}

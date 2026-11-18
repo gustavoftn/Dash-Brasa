@@ -1400,3 +1400,48 @@ tr.clickable:hover td {
     height: 180px;
   }
 }
+
+
+/* ── Functional header controls ─────────────────── */
+.icon-btn {
+  font: inherit;
+  padding: 0;
+}
+.icon-btn:focus-visible,
+.settings-btn:focus-visible,
+#globalSearch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.notification-match {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: .75rem;
+  padding: .8rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: .85rem;
+}
+.notification-match strong:last-of-type { text-align: right; }
+.notification-match small {
+  grid-column: 1 / -1;
+  color: var(--text-muted);
+}
+body.light-theme {
+  --bg: #f2f4f7;
+  --bg-elevated: #ffffff;
+  --surface: #ffffff;
+  --surface2: #eef1f5;
+  --surface3: #e2e7ee;
+  --border: rgba(15, 23, 42, .09);
+  --border-strong: rgba(15, 23, 42, .16);
+  --text: #17202c;
+  --text-muted: #586579;
+  --text-dim: #788497;
+  --shadow: 0 4px 24px rgba(15, 23, 42, .08);
+}
+body.light-theme .hero-card {
+  background: linear-gradient(135deg, #e5f5dc 0%, #edf4ef 45%, #e8eef8 100%);
+}
+body.light-theme .hero-countdown { color: rgba(20, 35, 25, .14); }
+body.light-theme .comp-select-wrap select { color-scheme: light; }
