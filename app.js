@@ -1,5 +1,9 @@
-const API_BASE = "https://api.football-data.org/v4"; // ajuste se o path for diferente
+/**
+ * Football Data Dashboard
+ * Tema claro · Favoritos · Gráficos · Trends
+ */
 
+const API_BASE = "/api/football";
 const FAV_KEY = "fd_favorite_team";
 
 let currentComp = "BSA";
@@ -108,8 +112,25 @@ async function api(params = {}) {
   setStatus("Carregando…", true);
   try {
     const res = await fetch(url);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error(
+        `Resposta inválida do servidor (HTTP ${res.status}). Verifique se /api/football está deployado.`
+      );
+    }
+
+    if (!res.ok) {
+      const msg = data.error || data.message || `HTTP ${res.status}`;
+      const extra = data.dica
+        ? ` ${data.dica}`
+        : data.detalhe
+          ? ` (${data.detalhe})`
+          : "";
+      throw new Error(msg + extra);
+    }
+
     cache[key] = { data, ts: Date.now() };
     setStatus("Pronto");
     return data;
