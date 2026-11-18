@@ -82,6 +82,14 @@
           Settings
         </button>
 
+        <button class="nav-item auth-btn" id="authButton" type="button">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </span>
+          <span id="authButtonText">Entrar / Criar conta</span>
+        </button>
+        <div class="auth-user-label" id="authUserLabel" hidden></div>
+
         <div class="user-card" id="favChip" hidden>
           <div class="user-avatar" id="favCrestWrap">
             <img class="fav-crest" id="favCrest" alt="" hidden />
@@ -153,6 +161,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
 </body>
 </html>

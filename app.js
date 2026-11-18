@@ -285,7 +285,6 @@ function makeBarChart(canvasId, labels, values, label, color = "#a3e635") {
   chartInstances.push(chart);
   return chart;
 }
-
 // ─── Renderers ─────────────────────────────────────
 
 function renderStandings(data) {
@@ -302,7 +301,6 @@ function renderStandings(data) {
   const chartLabels = top.map((r) => r.team.shortName || r.team.name || "?");
   const chartPoints = top.map((r) => r.points);
 
-  // Derive simple stats from table
   const leader = rows[0];
   const totalGoals = rows.reduce((s, r) => s + (r.goalsFor || 0), 0);
   const totalPlayed = rows.reduce((s, r) => s + (r.playedGames || 0), 0);
@@ -333,34 +331,22 @@ function renderStandings(data) {
 
     <div class="stats-row">
       <div class="stat-card">
-        <div class="stat-label">
-          <span class="stat-icon green">🏆</span>
-          League position
-        </div>
+        <div class="stat-label"><span class="stat-icon green">🏆</span>League position</div>
         <div class="stat-value">1st</div>
         <div class="stat-delta up">Leader · ${leader?.team?.shortName || "—"}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">
-          <span class="stat-icon purple">⚽</span>
-          Goals scored
-        </div>
+        <div class="stat-label"><span class="stat-icon purple">⚽</span>Goals scored</div>
         <div class="stat-value">${totalGoals}</div>
         <div class="stat-delta neutral">Across ${rows.length} teams</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">
-          <span class="stat-icon yellow">📊</span>
-          Win rate
-        </div>
+        <div class="stat-label"><span class="stat-icon yellow">📊</span>Win rate</div>
         <div class="stat-value">${winRate}%</div>
         <div class="stat-delta neutral">League average</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">
-          <span class="stat-icon blue">👥</span>
-          Teams
-        </div>
+        <div class="stat-label"><span class="stat-icon blue">👥</span>Teams</div>
         <div class="stat-value">${rows.length}</div>
         <div class="stat-delta neutral">In competition</div>
       </div>
@@ -368,24 +354,13 @@ function renderStandings(data) {
 
     <div class="card">
       <h2>Table · ${data.competition?.name || ""} · ${data.season?.startDate?.slice(0, 4) || ""}</h2>
-      <div class="chart-box">
-        <canvas id="chartPoints"></canvas>
-      </div>
+      <div class="chart-box"><canvas id="chartPoints"></canvas></div>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>#</th>
-              <th>Team</th>
-              <th>P</th>
-              <th>W</th>
-              <th>D</th>
-              <th>L</th>
-              <th>GF</th>
-              <th>GA</th>
-              <th>GD</th>
-              <th>Pts</th>
-              <th></th>
+              <th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th>
+              <th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th><th></th>
             </tr>
           </thead>
           <tbody>
@@ -443,9 +418,7 @@ function renderScorers(data) {
   let html = `
     <div class="card">
       <h2>Top Scorers · ${data.competition?.name || ""}</h2>
-      <div class="chart-box">
-        <canvas id="chartGoals"></canvas>
-      </div>
+      <div class="chart-box"><canvas id="chartGoals"></canvas></div>
   `;
 
   scorers.forEach((s, i) => {
@@ -503,15 +476,9 @@ function renderMatches(data, title = "Matches") {
 
     html += `
       <div class="match-card" data-match-id="${m.id}">
-        <div class="match-team home">
-          <span>${home}</span>
-          ${crest(m.homeTeam?.crest)}
-        </div>
+        <div class="match-team home"><span>${home}</span>${crest(m.homeTeam?.crest)}</div>
         <div class="match-score">${score}</div>
-        <div class="match-team away">
-          ${crest(m.awayTeam?.crest)}
-          <span>${away}</span>
-        </div>
+        <div class="match-team away">${crest(m.awayTeam?.crest)}<span>${away}</span></div>
         <div class="match-meta">
           ${formatDate(m.utcDate)} · ${statusBadge(m.status)}
           ${m.matchday ? ` · MD ${m.matchday}` : ""}
@@ -582,7 +549,6 @@ function renderTeams(data) {
   });
   bindHeartButtons(content);
 }
-
 function renderTrends(data) {
   destroyCharts();
   const trends = data.trends || [];
@@ -599,6 +565,7 @@ function renderTrends(data) {
   trends.forEach((t) => {
     const home = t.homeTeam || t.home;
     const away = t.awayTeam || t.away;
+
     if (home?.id) {
       if (!teamStats[home.id]) {
         teamStats[home.id] = {
@@ -613,6 +580,7 @@ function renderTrends(data) {
       if (home.avg_points != null) teamStats[home.id].avgPoints.push(home.avg_points);
       if (home.avg_goals_scored != null) teamStats[home.id].avgGoals.push(home.avg_goals_scored);
     }
+
     if (away?.id) {
       if (!teamStats[away.id]) {
         teamStats[away.id] = {
@@ -646,11 +614,7 @@ function renderTrends(data) {
   `;
 
   if (sorted.length) {
-    html += `
-      <div class="chart-box">
-        <canvas id="chartForm"></canvas>
-      </div>
-    `;
+    html += `<div class="chart-box"><canvas id="chartForm"></canvas></div>`;
   }
 
   html += `<div class="trend-list">`;
@@ -730,6 +694,7 @@ function renderToday(data) {
         m.status === "FINISHED" || m.status === "IN_PLAY"
           ? `${m.score?.fullTime?.home ?? "–"} × ${m.score?.fullTime?.away ?? "–"}`
           : "vs";
+
       html += `
         <div class="match-card" data-match-id="${m.id}">
           <div class="match-team home"><span>${home}</span>${crest(m.homeTeam?.crest)}</div>
@@ -791,6 +756,7 @@ function renderSearch() {
         resultEl.innerHTML = `<h3>Recent / upcoming matches</h3>`;
         const list = document.createElement("div");
         list.className = "match-list";
+
         (data.matches || []).forEach((m) => {
           const home = m.homeTeam?.shortName || m.homeTeam?.name || "—";
           const away = m.awayTeam?.shortName || m.awayTeam?.name || "—";
@@ -798,6 +764,7 @@ function renderSearch() {
             m.status === "FINISHED"
               ? `${m.score?.fullTime?.home ?? "–"} × ${m.score?.fullTime?.away ?? "–"}`
               : "vs";
+
           list.innerHTML += `
             <div class="match-card" data-match-id="${m.id}">
               <div class="match-team home"><span>${home}</span>${crest(m.homeTeam?.crest)}</div>
@@ -807,6 +774,7 @@ function renderSearch() {
             </div>
           `;
         });
+
         resultEl.appendChild(list);
         resultEl.querySelectorAll("[data-match-id]").forEach((el) => {
           el.addEventListener("click", () => showMatch(el.dataset.matchId));
@@ -816,10 +784,12 @@ function renderSearch() {
         resultEl.innerHTML = `<h3>Head-to-Head</h3>`;
         const list = document.createElement("div");
         list.className = "match-list";
+
         (data.matches || data.head2head?.matches || []).forEach((m) => {
           const home = m.homeTeam?.shortName || m.homeTeam?.name || "—";
           const away = m.awayTeam?.shortName || m.awayTeam?.name || "—";
           const score = `${m.score?.fullTime?.home ?? "–"} × ${m.score?.fullTime?.away ?? "–"}`;
+
           list.innerHTML += `
             <div class="match-card">
               <div class="match-team home"><span>${home}</span></div>
@@ -829,6 +799,7 @@ function renderSearch() {
             </div>
           `;
         });
+
         resultEl.appendChild(list);
       }
     } catch (err) {
@@ -837,6 +808,7 @@ function renderSearch() {
   });
 }
 
+// ─── Details (modal) ───────────────────────────────
 // ─── Details (modal) ───────────────────────────────
 
 async function showTeam(id) {
@@ -1009,6 +981,7 @@ async function showPerson(id) {
             </div>`;
           })
           .join("");
+
         modalBody.innerHTML += `
           <h3 style="margin:1.25rem 0 0.5rem">Recent matches</h3>
           ${list || "<p class='empty'>No data</p>"}
@@ -1087,8 +1060,6 @@ document.addEventListener("keydown", (e) => {
 updateDateGreeting();
 renderFavChip();
 loadTab("standings");
-
-
 // ─── Header controls ───────────────────────────────
 
 // Search accepts a numeric Football-Data ID and opens the existing search screen.
@@ -1099,7 +1070,7 @@ if (globalSearch) {
     event.preventDefault();
     const value = globalSearch.value.trim();
     loadTab("search");
-    // renderSearch is synchronous, so its form exists immediately after loadTab starts.
+
     requestAnimationFrame(() => {
       const searchId = document.getElementById("searchId");
       const searchForm = document.getElementById("searchForm");
@@ -1111,15 +1082,18 @@ if (globalSearch) {
   });
 }
 
-// Theme toggle: the selected theme is saved in this browser.
+// Theme toggle
 const themeToggle = document.getElementById("themeToggle");
+
 function applySavedTheme() {
   const light = localStorage.getItem("fd_theme") === "light";
   document.body.classList.toggle("light-theme", light);
   if (themeToggle) themeToggle.setAttribute("aria-pressed", String(light));
 }
+
 if (themeToggle) {
   applySavedTheme();
+
   themeToggle.addEventListener("click", () => {
     const light = !document.body.classList.contains("light-theme");
     document.body.classList.toggle("light-theme", light);
@@ -1128,34 +1102,41 @@ if (themeToggle) {
   });
 }
 
-// Settings opens a working panel with refresh and favorite-management actions.
+// Settings
 const settingsButton = document.querySelector(".settings-btn");
+
 if (settingsButton) {
   settingsButton.addEventListener("click", () => {
     const favorite = getFavorite();
+
     openModal(`
       <div class="settings-panel">
         <h2>Configurações</h2>
         <p class="detail-meta">Preferências do dashboard KICKOFF.</p>
+
         <div class="detail-item" style="margin:1rem 0">
           <div class="label">Competição selecionada</div>
           <div class="value">${compSelect.options[compSelect.selectedIndex].text}</div>
         </div>
+
         <div class="detail-item" style="margin:1rem 0">
           <div class="label">Time favorito</div>
           <div class="value">${favorite ? favorite.name : "Nenhum time selecionado"}</div>
         </div>
+
         <div class="modal-actions">
           <button type="button" class="btn-primary" id="settingsRefresh">Atualizar dados</button>
           <button type="button" class="btn-outline" id="settingsClearFavorite">Remover favorito</button>
         </div>
       </div>
     `);
+
     document.getElementById("settingsRefresh").addEventListener("click", () => {
       cache = {};
       closeModal();
       loadTab(currentTab);
     });
+
     document.getElementById("settingsClearFavorite").addEventListener("click", () => {
       setFavorite(null);
       closeModal();
@@ -1163,29 +1144,305 @@ if (settingsButton) {
   });
 }
 
-// Notifications button shows today's fixtures from the same API used by the Today tab.
+// Notifications
 const notificationsButton = document.getElementById("notificationsBtn");
+
 if (notificationsButton) {
   notificationsButton.addEventListener("click", async () => {
     openModal('<h2>Partidas de hoje</h2><p class="detail-meta">Carregando partidas…</p>');
+
     try {
       const data = await api({ type: "matchesToday" });
       const matches = data.matches || [];
+
       const list = matches.length
         ? matches.map((m) => `
             <div class="notification-match">
               <strong>${m.homeTeam?.shortName || m.homeTeam?.name || "—"}</strong>
-              <span>${m.status === "FINISHED" || m.status === "IN_PLAY" || m.status === "PAUSED"
-                ? `${m.score?.fullTime?.home ?? "–"} × ${m.score?.fullTime?.away ?? "–"}`
-                : "vs"}</span>
+              <span>${
+                m.status === "FINISHED" || m.status === "IN_PLAY" || m.status === "PAUSED"
+                  ? `${m.score?.fullTime?.home ?? "–"} × ${m.score?.fullTime?.away ?? "–"}`
+                  : "vs"
+              }</span>
               <strong>${m.awayTeam?.shortName || m.awayTeam?.name || "—"}</strong>
               <small>${m.competition?.name || ""} · ${formatDate(m.utcDate)}</small>
             </div>
           `).join("")
         : '<p class="empty">Nenhuma partida encontrada para hoje nas competições disponíveis.</p>';
-      modalBody.innerHTML = `<h2>Partidas de hoje</h2><p class="detail-meta">${matches.length} partida(s) encontrada(s)</p>${list}`;
+
+      modalBody.innerHTML = `
+        <h2>Partidas de hoje</h2>
+        <p class="detail-meta">${matches.length} partida(s) encontrada(s)</p>
+        ${list}
+      `;
     } catch (error) {
       modalBody.innerHTML = `<h2>Partidas de hoje</h2><div class="error">${error.message}</div>`;
     }
   });
 }
+
+// ─── Supabase Auth (cadastro e login de usuários) ─────────────
+
+// Configure a URL e a chave publicável do Supabase abaixo.
+// NUNCA coloque a chave service_role neste arquivo.
+
+const SUPABASE_URL = "https://pupcggbdnmurrflcizkf.supabase.co/rest/v1/";
+const SUPABASE_ANON_KEY = "sb_publishable_eRIUE5Kw2x_poM3N7dg6TQ_4UsfscN-";
+
+let supabaseClient = null;
+let currentAuthUser = null;
+
+function isSupabaseConfigured() {
+  return (
+    SUPABASE_URL.startsWith("https://") &&
+    !SUPABASE_URL.includes("COLE_AQUI") &&
+    SUPABASE_ANON_KEY &&
+    !SUPABASE_ANON_KEY.includes("COLE_AQUI")
+  );
+}
+
+function updateAuthButton(user) {
+  const button = document.getElementById("authButton");
+  const buttonText = document.getElementById("authButtonText");
+  const userLabel = document.getElementById("authUserLabel");
+
+  if (!button || !buttonText || !userLabel) return;
+
+  if (user) {
+    const displayName = user.user_metadata?.full_name || user.email || "Usuário";
+
+    buttonText.textContent = "Minha conta / Sair";
+    userLabel.textContent = displayName;
+    userLabel.hidden = false;
+
+    greeting.textContent = `Olá, ${displayName.split(" ")[0]}`;
+  } else {
+    buttonText.textContent = "Entrar / Criar conta";
+    userLabel.hidden = true;
+    updateDateGreeting();
+  }
+}
+
+function showAuthModal(mode = "login", message = "") {
+  const isSignup = mode === "signup";
+
+  openModal(`
+    <section class="auth-panel">
+      <div class="auth-heading-icon">⚽</div>
+
+      <h2>${isSignup ? "Criar sua conta" : "Entrar no KICKOFF"}</h2>
+
+      <p class="detail-meta">
+        ${isSignup
+          ? "Crie sua conta para acessar sua experiência."
+          : "Acesse sua conta com e-mail e senha."}
+      </p>
+
+      ${message ? `<div class="auth-message" role="status">${escapeHtml(message)}</div>` : ""}
+
+      <form id="authForm" class="auth-form">
+        ${
+          isSignup
+            ? `
+              <label for="authName">Nome</label>
+              <input
+                id="authName"
+                name="name"
+                type="text"
+                autocomplete="name"
+                placeholder="Seu nome"
+                required
+                minlength="2"
+              />
+            `
+            : ""
+        }
+
+        <label for="authEmail">E-mail</label>
+        <input
+          id="authEmail"
+          name="email"
+          type="email"
+          autocomplete="email"
+          placeholder="voce@email.com"
+          required
+        />
+
+        <label for="authPassword">Senha</label>
+        <input
+          id="authPassword"
+          name="password"
+          type="password"
+          autocomplete="${isSignup ? "new-password" : "current-password"}"
+          placeholder="Mínimo de 6 caracteres"
+          required
+          minlength="6"
+        />
+
+        <button class="btn-primary auth-submit" type="submit">
+          ${isSignup ? "Criar conta" : "Entrar"}
+        </button>
+      </form>
+
+      <p class="auth-switch">
+        ${isSignup ? "Já tem uma conta?" : "Ainda não tem uma conta?"}
+        <button type="button" id="authSwitch">
+          ${isSignup ? "Fazer login" : "Criar conta"}
+        </button>
+      </p>
+    </section>
+  `);
+
+  document.getElementById("authSwitch").addEventListener("click", () => {
+    showAuthModal(isSignup ? "login" : "signup");
+  });
+
+  document.getElementById("authForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const form = event.currentTarget;
+    const submit = form.querySelector("button[type='submit']");
+
+    const email = form.elements.email.value.trim();
+    const password = form.elements.password.value;
+    const name = isSignup ? form.elements.name.value.trim() : "";
+
+    submit.disabled = true;
+    submit.textContent = isSignup ? "Criando conta…" : "Entrando…";
+
+    try {
+      let result;
+
+      if (isSignup) {
+        result = await supabaseClient.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: name,
+            },
+          },
+        });
+      } else {
+        result = await supabaseClient.auth.signInWithPassword({
+          email,
+          password,
+        });
+      }
+
+      if (result.error) throw result.error;
+
+      if (isSignup && !result.data.session) {
+        showAuthModal(
+          "login",
+          "Conta criada! Confira seu e-mail para confirmar o cadastro e depois faça login."
+        );
+        return;
+      }
+
+      currentAuthUser = result.data.user || result.data.session?.user || null;
+
+      updateAuthButton(currentAuthUser);
+      closeModal();
+
+    } catch (error) {
+      showAuthModal(
+        mode,
+        error.message || "Não foi possível autenticar. Tente novamente."
+      );
+    }
+  });
+}
+
+async function initializeSupabaseAuth() {
+  const button = document.getElementById("authButton");
+
+  if (!button) return;
+
+  if (!isSupabaseConfigured()) {
+    button.addEventListener("click", () => {
+      openModal(`
+        <div class="auth-panel">
+          <h2>Conectar ao Supabase</h2>
+
+          <p>
+            Para ativar cadastro e login, configure
+            <strong>SUPABASE_URL</strong> e
+            <strong>SUPABASE_ANON_KEY</strong>
+            no início da seção Supabase Auth do arquivo app.js.
+          </p>
+
+          <ol class="auth-steps">
+            <li>Abra seu projeto no Supabase.</li>
+            <li>Entre em Project Settings → API.</li>
+            <li>Copie a Project URL e a chave publishable (ou anon legacy).</li>
+            <li>Cole os valores nas duas constantes do app.js.</li>
+          </ol>
+
+          <p class="auth-warning">
+            Nunca use a chave service_role no navegador.
+          </p>
+        </div>
+      `);
+    });
+
+    updateAuthButton(null);
+    return;
+  }
+
+  if (!window.supabase?.createClient) {
+    console.error("Biblioteca do Supabase não foi carregada.");
+    return;
+  }
+
+  supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+  );
+
+  button.addEventListener("click", async () => {
+    if (currentAuthUser) {
+      const confirmed = window.confirm("Deseja sair da sua conta?");
+      if (!confirmed) return;
+
+      const { error } = await supabaseClient.auth.signOut();
+
+      if (error) {
+        openModal(`<div class="error">${escapeHtml(error.message)}</div>`);
+        return;
+      }
+
+      currentAuthUser = null;
+      updateAuthButton(null);
+      return;
+    }
+
+    showAuthModal("login");
+  });
+
+  const { data, error } = await supabaseClient.auth.getSession();
+
+  if (error) {
+    console.error("Erro ao recuperar sessão Supabase:", error.message);
+  }
+
+  currentAuthUser = data?.session?.user || null;
+  updateAuthButton(currentAuthUser);
+
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    currentAuthUser = session?.user || null;
+    updateAuthButton(currentAuthUser);
+  });
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[char]);
+}
+
+initializeSupabaseAuth();
