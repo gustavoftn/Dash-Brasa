@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Football Data · Dashboard</title>
+  <title>KICKOFF · Football Dashboard</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -11,75 +11,145 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
-  <div class="app">
-    <!-- Header -->
-    <header class="header">
-      <div class="brand">
-        <div class="logo-mark" aria-hidden="true">
-          <svg viewBox="0 0 40 40" width="40" height="40">
-            <circle cx="20" cy="20" r="18" fill="#1a73e8"/>
-            <path d="M20 4c-2.5 4-4 8-4 12s1.5 8 4 12c2.5-4 4-8 4-12s-1.5-8-4-12z" fill="#fff" opacity=".9"/>
-            <path d="M6 14c5 1 10 1.5 14 1.5S29 15 34 14c-1 5-1.5 10-1.5 14S33 33 34 36c-5-1-10-1.5-14-1.5S11 35 6 36c1-5 1.5-10 1.5-14S7 15 6 14z" fill="#fff" opacity=".35"/>
-            <circle cx="20" cy="20" r="5" fill="#fff"/>
-          </svg>
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="logo">
+          <div class="logo-icon">
+            <svg viewBox="0 0 40 40" width="28" height="28">
+              <circle cx="20" cy="20" r="18" fill="currentColor"/>
+              <path d="M20 4c-2.5 4-4 8-4 12s1.5 8 4 12c2.5-4 4-8 4-12s-1.5-8-4-12z" fill="#0d1117" opacity=".9"/>
+              <path d="M6 14c5 1 10 1.5 14 1.5S29 15 34 14c-1 5-1.5 10-1.5 14S33 33 34 36c-5-1-10-1.5-14-1.5S11 35 6 36c1-5 1.5-10 1.5-14S7 15 6 14z" fill="#0d1117" opacity=".35"/>
+              <circle cx="20" cy="20" r="5" fill="#0d1117"/>
+            </svg>
+          </div>
+          <span class="logo-text">KICKOFF</span>
         </div>
-        <div>
-          <h1>Football Data</h1>
-          <p class="subtitle">Dashboard · football-data.org</p>
-        </div>
+
+        <nav class="sidebar-nav" id="mainTabs">
+          <button class="nav-item active" data-tab="standings">
+            <span class="nav-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            </span>
+            Overview
+          </button>
+          <button class="nav-item" data-tab="trends">
+            <span class="nav-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-6"/></svg>
+            </span>
+            Analytics
+          </button>
+          <button class="nav-item" data-tab="matches">
+            <span class="nav-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            </span>
+            Matches
+            <span class="nav-badge" id="matchesBadge" hidden>0</span>
+          </button>
+          <button class="nav-item" data-tab="teams">
+            <span class="nav-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </span>
+            Squad
+          </button>
+          <button class="nav-item" data-tab="scorers">
+            <span class="nav-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+            </span>
+            Scorers
+          </button>
+          <button class="nav-item" data-tab="today">
+            <span class="nav-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            </span>
+            Today
+          </button>
+          <button class="nav-item" data-tab="search">
+            <span class="nav-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            </span>
+            Search
+          </button>
+        </nav>
       </div>
 
-      <div class="header-right">
-        <div class="fav-chip" id="favChip" hidden>
-          <span class="fav-heart">♥</span>
-          <img class="fav-crest" id="favCrest" alt="" />
-          <span id="favName">—</span>
-          <button type="button" class="fav-clear" id="favClear" title="Remover favorito">×</button>
+      <div class="sidebar-bottom">
+        <button class="nav-item settings-btn" type="button" title="Settings">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          </span>
+          Settings
+        </button>
+
+        <div class="user-card" id="favChip" hidden>
+          <div class="user-avatar" id="favCrestWrap">
+            <img class="fav-crest" id="favCrest" alt="" hidden />
+            <span class="avatar-fallback" id="favFallback">♥</span>
+          </div>
+          <div class="user-info">
+            <div class="user-name" id="favName">—</div>
+            <div class="user-role">Favorite team</div>
+          </div>
+          <button type="button" class="fav-clear" id="favClear" title="Remove favorite">×</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="date-label" id="dateLabel">—</div>
+          <h1 class="greeting" id="greeting">Welcome back</h1>
         </div>
 
-        <label class="select-wrap">
-          <span>Competição</span>
-          <select id="compSelect">
-            <option value="BSA">🇧🇷 Brasileirão</option>
-            <option value="PL">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</option>
-            <option value="PD">🇪🇸 La Liga</option>
-            <option value="SA">🇮🇹 Serie A</option>
-            <option value="BL1">🇩🇪 Bundesliga</option>
-            <option value="FL1">🇫🇷 Ligue 1</option>
-            <option value="CL">🏆 Champions League</option>
-            <option value="ELC">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Championship</option>
-            <option value="DED">🇳🇱 Eredivisie</option>
-            <option value="PPL">🇵🇹 Primeira Liga</option>
-            <option value="WC">🌍 World Cup</option>
-            <option value="EC">🇪🇺 Euro</option>
-          </select>
-        </label>
+        <div class="topbar-right">
+          <div class="search-box">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input type="text" placeholder="Search anything…" id="globalSearch" readonly />
+          </div>
+
+          <label class="comp-select-wrap">
+            <select id="compSelect">
+              <option value="BSA">🇧🇷 Brasileirão</option>
+              <option value="PL">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</option>
+              <option value="PD">🇪🇸 La Liga</option>
+              <option value="SA">🇮🇹 Serie A</option>
+              <option value="BL1">🇩🇪 Bundesliga</option>
+              <option value="FL1">🇫🇷 Ligue 1</option>
+              <option value="CL">🏆 Champions League</option>
+              <option value="ELC">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Championship</option>
+              <option value="DED">🇳🇱 Eredivisie</option>
+              <option value="PPL">🇵🇹 Primeira Liga</option>
+              <option value="WC">🌍 World Cup</option>
+              <option value="EC">🇪🇺 Euro</option>
+            </select>
+          </label>
+
+          <div class="icon-btn" title="Notifications">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          </div>
+          <div class="icon-btn theme-toggle" title="Theme">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </div>
+        </div>
+      </header>
+
+      <div class="status" id="status">
+        <span class="spinner" hidden></span>
+        <span id="statusText">Ready</span>
       </div>
-    </header>
 
-    <nav class="tabs" id="mainTabs">
-      <button class="tab active" data-tab="standings">Tabela</button>
-      <button class="tab" data-tab="scorers">Artilharia</button>
-      <button class="tab" data-tab="matches">Jogos</button>
-      <button class="tab" data-tab="teams">Times</button>
-      <button class="tab" data-tab="trends">Forma</button>
-      <button class="tab" data-tab="today">Hoje</button>
-      <button class="tab" data-tab="search">Busca</button>
-    </nav>
-
-    <div class="status" id="status">
-      <span class="spinner" hidden></span>
-      <span id="statusText">Pronto</span>
+      <main class="content" id="content"></main>
     </div>
+  </div>
 
-    <main class="content" id="content"></main>
-
-    <div class="modal" id="modal" hidden>
-      <div class="modal-backdrop" id="modalBackdrop"></div>
-      <div class="modal-box">
-        <button class="modal-close" id="modalClose" aria-label="Fechar">×</button>
-        <div id="modalBody"></div>
-      </div>
+  <div class="modal" id="modal" hidden>
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+    <div class="modal-box">
+      <button class="modal-close" id="modalClose" aria-label="Close">×</button>
+      <div id="modalBody"></div>
     </div>
   </div>
 
