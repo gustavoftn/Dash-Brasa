@@ -1,137 +1,510 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Painel dos Campeonatos</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --giz: #eef3ea; --papel: #fbfdf9; --tinta: #14231a; --suave: #5b6b60;
-    --gramado: #1f6b3a; --linha: #cfdccb; --amarelo: #f2c230; --vermelho: #c93d3d;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root { --giz: #0f1a13; --papel: #16241b; --tinta: #e8f0e4; --suave: #9bb0a1; --gramado: #4fb872; --linha: #27402f; }
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--giz); color: var(--tinta); font: 16px/1.5 "Source Sans 3", system-ui, sans-serif; }
-  main { max-width: 920px; margin: 0 auto; padding: 32px 16px 64px; }
-  h1 { font: 800 clamp(2rem, 6vw, 3.4rem)/1 "Bricolage Grotesque", sans-serif; margin: 0 0 24px; letter-spacing: -0.02em; }
-  .controles { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 20px; }
-  select { font: inherit; padding: 8px 12px; border: 2px solid var(--tinta); border-radius: 8px; background: var(--papel); color: var(--tinta); }
-  .abas { display: flex; gap: 4px; }
-  .abas button { font: 600 1rem "Source Sans 3", sans-serif; padding: 8px 14px; border: 2px solid var(--tinta); background: transparent; color: var(--tinta); cursor: pointer; border-radius: 8px; }
-  .abas button[aria-selected="true"] { background: var(--gramado); border-color: var(--gramado); color: #fff; }
-  button:focus-visible, select:focus-visible { outline: 3px solid var(--amarelo); outline-offset: 2px; }
-  .tabela { overflow-x: auto; background: var(--papel); border: 1px solid var(--linha); border-radius: 12px; }
-  table { width: 100%; border-collapse: collapse; min-width: 560px; }
-  th, td { padding: 10px 12px; text-align: right; border-bottom: 1px solid var(--linha); white-space: nowrap; }
-  th { font-weight: 600; color: var(--suave); font-size: .9rem; }
-  th:nth-child(2), td:nth-child(2) { text-align: left; width: 100%; }
-  td.pos { text-align: center; font-weight: 600; width: 44px; border-left: 5px solid transparent; }
-  tr.libertadores td.pos { border-left-color: var(--gramado); }
-  tr.rebaixamento td.pos { border-left-color: var(--vermelho); }
-  td.pts { font-weight: 800; }
-  .time { display: inline-flex; align-items: center; gap: 10px; }
-  .time img { width: 22px; height: 22px; object-fit: contain; }
-  .grupo { margin: 24px 0 8px; font: 600 1.1rem "Bricolage Grotesque", sans-serif; }
-  .legenda { color: var(--suave); font-size: .9rem; margin-top: 12px; }
-  .jogo { display: grid; grid-template-columns: 90px 1fr auto 1fr; gap: 12px; align-items: center; padding: 12px; border-bottom: 1px solid var(--linha); }
-  .jogo .data { color: var(--suave); font-size: .9rem; }
-  .jogo .casa { justify-content: flex-end; text-align: right; }
-  .jogo .x { color: var(--suave); }
-  .msg { padding: 32px 16px; text-align: center; color: var(--suave); }
-  @media (max-width: 560px) { .jogo { grid-template-columns: 1fr auto 1fr; } .jogo .data { grid-column: 1 / -1; } }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Central de Futebol - Dados Completos</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-hover: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #10b981;
+      --border: #334155;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 20px; line-height: 1.5; }
+    .container { max-width: 1100px; margin: 0 auto; }
+
+    /* Topo e Seletor */
+    header {
+      display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between;
+      background: var(--surface); padding: 20px; border-radius: 12px; border: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .comp-info { display: flex; align-items: center; gap: 14px; }
+    .comp-info img { width: 48px; height: 48px; object-fit: contain; background: #fff; padding: 4px; border-radius: 8px; }
+    .comp-meta { font-size: 0.85rem; color: var(--muted); }
+    select, button {
+      background: var(--bg); color: var(--text); border: 1px solid var(--border);
+      padding: 10px 14px; border-radius: 8px; font-size: 0.95rem; cursor: pointer;
+    }
+    select:focus, button:focus { outline: 2px solid var(--accent); }
+
+    /* Abas Principais */
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto; }
+    .tab-btn {
+      background: var(--surface); border: 1px solid var(--border); padding: 10px 18px;
+      border-radius: 8px; font-weight: 600; transition: 0.2s;
+    }
+    .tab-btn.active { background: var(--accent); color: #062c1e; border-color: var(--accent); }
+
+    /* Sub-controles */
+    .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; align-items: center; }
+    .pill-btn { padding: 6px 12px; font-size: 0.85rem; border-radius: 20px; }
+    .pill-btn.active { background: var(--accent); color: #062c1e; border-color: var(--accent); font-weight: 600; }
+
+    /* Tabelas */
+    .table-wrap { overflow-x: auto; background: var(--surface); border-radius: 12px; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; }
+    tr:hover td { background: rgba(255, 255, 255, 0.03); }
+    .team-cell { display: flex; align-items: center; gap: 10px; font-weight: 500; }
+    .team-cell img { width: 24px; height: 24px; object-fit: contain; }
+    .num { text-align: center; }
+
+    /* Badges de Forma (W/D/L) */
+    .form-badges { display: flex; gap: 3px; justify-content: center; }
+    .badge {
+      width: 18px; height: 18px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;
+      display: inline-flex; align-items: center; justify-content: center; color: #fff;
+    }
+    .W { background: #16a34a; }
+    .D { background: #64748b; }
+    .L { background: #dc2626; }
+
+    /* Cards de Jogos */
+    .matches-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+    .match-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .match-header { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--muted); }
+    .match-teams { display: flex; flex-direction: column; gap: 8px; }
+    .match-row { display: flex; justify-content: space-between; align-items: center; }
+    .score { font-weight: 700; font-size: 1.1rem; }
+    .match-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      border-top: 1px solid var(--border); padding-top: 8px; font-size: 0.78rem; color: var(--muted);
+    }
+
+    /* Cards de Times */
+    .teams-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+    .team-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+    .team-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .team-card-header img { width: 42px; height: 42px; object-fit: contain; }
+    .team-details { font-size: 0.85rem; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+    details { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 8px; }
+    summary { cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--accent); }
+    .squad-list { list-style: none; margin-top: 8px; max-height: 200px; overflow-y: auto; font-size: 0.82rem; }
+    .squad-list li { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+
+    /* Modal H2H */
+    dialog {
+      background: var(--surface); color: var(--text); border: 1px solid var(--border);
+      border-radius: 12px; padding: 24px; max-width: 550px; width: 92%; margin: auto;
+    }
+    dialog::backdrop { background: rgba(0, 0, 0, 0.75); }
+    .h2h-stats { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; gap: 10px; margin: 16px 0; background: var(--bg); padding: 12px; border-radius: 8px; }
+
+    .loading { text-align: center; padding: 40px; color: var(--muted); }
+  </style>
 </head>
 <body>
-<main>
-  <h1>Painel dos campeonatos</h1>
-  <div class="controles">
-    <label class="sr" for="comp" style="position:absolute;left:-9999px">Campeonato</label>
-    <select id="comp">
-      <option value="BSA">Brasileirão Série A</option>
-      <option value="PL">Premier League</option>
-      <option value="PD">La Liga</option>
-      <option value="SA">Serie A (Itália)</option>
-      <option value="BL1">Bundesliga</option>
-      <option value="FL1">Ligue 1</option>
-      <option value="CL">Champions League</option>
-    </select>
-    <div class="abas" role="tablist">
-      <button role="tab" data-tipo="standings" aria-selected="true">Classificação</button>
-      <button role="tab" data-tipo="scorers" aria-selected="false">Artilheiros</button>
-      <button role="tab" data-tipo="matches" aria-selected="false">Próximos jogos</button>
-    </div>
+  <div class="container">
+    <!-- Cabeçalho da Competição -->
+    <header>
+      <div class="comp-info" id="compHeader">
+        <div>
+          <h1 id="compName">Carregando...</h1>
+          <div class="comp-meta" id="compMeta"></div>
+        </div>
+      </div>
+
+      <div>
+        <select id="compSelect">
+          <option value="BSA">Brasileirão Série A (BSA)</option>
+          <option value="PL">Premier League (PL)</option>
+          <option value="PD">La Liga (PD)</option>
+          <option value="SA">Serie A - Itália (SA)</option>
+          <option value="BL1">Bundesliga (BL1)</option>
+          <option value="FL1">Ligue 1 (FL1)</option>
+          <option value="CL">Champions League (CL)</option>
+          <option value="PPL">Primeira Liga - Portugal (PPL)</option>
+        </select>
+      </div>
+    </header>
+
+    <!-- Navegação -->
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="standings">Classificação</button>
+      <button class="tab-btn" data-tab="matches">Partidas & H2H</button>
+      <button class="tab-btn" data-tab="scorers">Artilharia & Assistências</button>
+      <button class="tab-btn" data-tab="teams">Times & Elencos</button>
+    </nav>
+
+    <!-- Área Dinâmica -->
+    <main id="appContent">
+      <div class="loading">Carregando dados da competição...</div>
+    </main>
   </div>
-  <div id="conteudo" aria-live="polite"></div>
-</main>
 
-<script>
-const $ = (s) => document.querySelector(s);
-const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const crest = (u) => (u ? `<img src="${esc(u)}" alt="" loading="lazy">` : "");
-let tipo = "standings";
+  <!-- Modal de Confronto Direto (H2H) -->
+  <dialog id="h2hModal">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3>Confronto Direto (Head-to-Head)</h3>
+      <button onclick="document.getElementById('h2hModal').close()">✕</button>
+    </div>
+    <div id="h2hBody" style="margin-top:12px;"></div>
+  </dialog>
 
-const renders = {
-  standings(d) {
-    const grupos = (d.standings || []).filter((s) => s.type === "TOTAL");
-    if (!grupos.length) return `<p class="msg">Sem classificação disponível.</p>`;
-    const unico = grupos.length === 1;
-    return grupos.map((g) => {
-      const total = g.table.length;
-      const linhas = g.table.map((l) => {
-        const cls = unico && total >= 16 ? (l.position <= 4 ? "libertadores" : l.position > total - 4 ? "rebaixamento" : "") : "";
-        return `<tr class="${cls}"><td class="pos">${l.position}</td>
-          <td><span class="time">${crest(l.team.crest)}${esc(l.team.shortName || l.team.name)}</span></td>
-          <td class="pts">${l.points}</td><td>${l.playedGames}</td><td>${l.won}</td><td>${l.draw}</td><td>${l.lost}</td>
-          <td>${l.goalsFor}</td><td>${l.goalsAgainst}</td><td>${l.goalDifference}</td></tr>`;
+  <script>
+    const state = {
+      comp: "BSA",
+      tab: "standings",
+      standingType: "TOTAL", // TOTAL | HOME | AWAY
+      matchday: "",
+      matchStatus: "",
+      cache: {} // Cache local em memória para não repetir requisições ao trocar abas
+    };
+
+    const appContent = document.getElementById("appContent");
+    const compSelect = document.getElementById("compSelect");
+
+    // Função auxiliar para buscar da sua API serverless
+    async function fetchAPI(params) {
+      const query = new URLSearchParams(params).toString();
+      if (state.cache[query]) return state.cache[query];
+
+      const res = await fetch(`/api/football?${query}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao carregar dados");
+
+      state.cache[query] = data;
+      return data;
+    }
+
+    // Atualiza o cabeçalho com dados gerais da competição
+    async function loadCompetitionHeader() {
+      try {
+        const data = await fetchAPI({ comp: state.comp, type: "competition" });
+        const season = data.currentSeason || {};
+        state.matchday = season.currentMatchday || "";
+
+        document.getElementById("compHeader").innerHTML = `
+          ${data.emblem ? `<img src="${data.emblem}" alt="${data.name}">` : ""}
+          <div>
+            <h1>${data.name} (${data.area?.name || ""})</h1>
+            <div class="comp-meta">
+              Temporada: ${season.startDate || "?"} até ${season.endDate || "?"} • 
+              Rodada Atual: <strong>${season.currentMatchday || "-"}</strong>
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // 1. RENDERIZA CLASSIFICAÇÃO (TOTAL, HOME, AWAY)
+    async function renderStandings() {
+      appContent.innerHTML = `<div class="loading">Carregando tabela...</div>`;
+      const data = await fetchAPI({ comp: state.comp, type: "standings" });
+
+      const tableObj = data.standings.find(s => s.type === state.standingType) || data.standings[0];
+      if (!tableObj) {
+        appContent.innerHTML = `<p>Tabela indisponível para esta competição.</p>`;
+        return;
+      }
+
+      const rows = tableObj.table.map(row => {
+        const formHtml = (row.form || "")
+          .split(",")
+          .filter(Boolean)
+          .map(r => `<span class="badge ${r}">${r === "W" ? "V" : r === "D" ? "E" : "D"}</span>`)
+          .join("");
+
+        return `
+          <tr>
+            <td class="num"><strong>${row.position}</strong></td>
+            <td>
+              <div class="team-cell">
+                <img src="${row.team.crest}" alt="">
+                <span>${row.team.shortName || row.team.name}</span>
+              </div>
+            </td>
+            <td class="num"><strong>${row.points}</strong></td>
+            <td class="num">${row.playedGames}</td>
+            <td class="num">${row.won}</td>
+            <td class="num">${row.draw}</td>
+            <td class="num">${row.lost}</td>
+            <td class="num">${row.goalsFor}</td>
+            <td class="num">${row.goalsAgainst}</td>
+            <td class="num">${row.goalDifference}</td>
+            <td><div class="form-badges">${formHtml || "-"}</div></td>
+          </tr>
+        `;
       }).join("");
-      return `${unico ? "" : `<div class="grupo">${esc(g.group || "")}</div>`}
-        <div class="tabela"><table><thead><tr><th>#</th><th>Time</th><th>Pts</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th><th>SG</th></tr></thead><tbody>${linhas}</tbody></table></div>`;
-    }).join("") + (grupos.length === 1 ? `<p class="legenda">Verde: 4 primeiros. Vermelho: 4 últimos.</p>` : "");
-  },
-  scorers(d) {
-    if (!d.scorers?.length) return `<p class="msg">Sem artilheiros disponíveis.</p>`;
-    const linhas = d.scorers.map((s, i) => `<tr><td class="pos">${i + 1}</td>
-      <td><span class="time">${crest(s.team.crest)}<span>${esc(s.player.name)} <span style="color:var(--suave)">${esc(s.team.shortName || s.team.name)}</span></span></span></td>
-      <td class="pts">${s.goals}</td><td>${s.assists ?? "-"}</td><td>${s.penalties ?? "-"}</td><td>${s.playedMatches}</td></tr>`).join("");
-    return `<div class="tabela"><table><thead><tr><th>#</th><th>Jogador</th><th>Gols</th><th>Assist.</th><th>Pên.</th><th>Jogos</th></tr></thead><tbody>${linhas}</tbody></table></div>`;
-  },
-  matches(d) {
-    if (!d.matches?.length) return `<p class="msg">Nenhum jogo agendado no momento.</p>`;
-    const fmt = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
-    return `<div class="tabela">` + d.matches.slice(0, 15).map((m) => `<div class="jogo">
-      <span class="data">${fmt.format(new Date(m.utcDate))}</span>
-      <span class="time casa">${esc(m.homeTeam.shortName || m.homeTeam.name)}${crest(m.homeTeam.crest)}</span>
-      <span class="x">x</span>
-      <span class="time">${crest(m.awayTeam.crest)}${esc(m.awayTeam.shortName || m.awayTeam.name)}</span></div>`).join("") + `</div>`;
-  },
-};
 
-async function carregar() {
-  const comp = $("#comp").value;
-  $("#conteudo").innerHTML = `<p class="msg">Carregando…</p>`;
-  try {
-    const r = await fetch(`/api/football?comp=${comp}&type=${tipo}`);
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.message || d.error || "Erro ao carregar os dados.");
-    $("#conteudo").innerHTML = renders[tipo](d);
-  } catch (e) {
-    $("#conteudo").innerHTML = `<p class="msg">${esc(e.message)} Tente outro campeonato ou volte em alguns minutos.</p>`;
-  }
-}
+      appContent.innerHTML = `
+        <div class="controls">
+          <button class="pill-btn ${state.standingType === "TOTAL" ? "active" : ""}" onclick="setStandingType('TOTAL')">Geral</button>
+          <button class="pill-btn ${state.standingType === "HOME" ? "active" : ""}" onclick="setStandingType('HOME')">Mandante (Casa)</button>
+          <button class="pill-btn ${state.standingType === "AWAY" ? "active" : ""}" onclick="setStandingType('AWAY')">Visitante (Fora)</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="num">#</th>
+                <th>Clube</th>
+                <th class="num">PTS</th>
+                <th class="num">J</th>
+                <th class="num">V</th>
+                <th class="num">E</th>
+                <th class="num">D</th>
+                <th class="num">GP</th>
+                <th class="num">GC</th>
+                <th class="num">SG</th>
+                <th class="num">Últimos 5</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+    }
 
-$("#comp").addEventListener("change", carregar);
-document.querySelectorAll("[role=tab]").forEach((b) => b.addEventListener("click", () => {
-  tipo = b.dataset.tipo;
-  document.querySelectorAll("[role=tab]").forEach((x) => x.setAttribute("aria-selected", x === b));
-  carregar();
-}));
-carregar();
-</script>
+    // 2. RENDERIZA PARTIDAS + FILTROS + BOTÃO H2H
+    async function renderMatches() {
+      appContent.innerHTML = `<div class="loading">Carregando partidas...</div>`;
+      const params = { comp: state.comp, type: "matches" };
+      if (state.matchday) params.matchday = state.matchday;
+      if (state.matchStatus) params.status = state.matchStatus;
+
+      const data = await fetchAPI(params);
+      const matches = data.matches || [];
+
+      const statusLabel = {
+        FINISHED: "Encerrado",
+        IN_PLAY: "🔴 AO VIVO",
+        PAUSED: "⏸ Intervalo",
+        TIMED: "Agendado",
+        SCHEDULED: "A definir",
+        POSTPONED: "Adiado"
+      };
+
+      const cards = matches.map(m => {
+        const date = new Date(m.utcDate).toLocaleString("pt-BR", {
+          day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"
+        });
+        const ft = m.score?.fullTime || {};
+        const ht = m.score?.halfTime || {};
+        const referee = m.referees?.[0]?.name || "Árbitro não informado";
+
+        return `
+          <div class="match-card">
+            <div class="match-header">
+              <span>Rodada ${m.matchday || "-"} • ${date}</span>
+              <span>${statusLabel[m.status] || m.status}</span>
+            </div>
+            <div class="match-teams">
+              <div class="match-row">
+                <div class="team-cell">
+                  <img src="${m.homeTeam.crest}" alt="">
+                  <span>${m.homeTeam.shortName || m.homeTeam.name}</span>
+                </div>
+                <span class="score">${ft.home ?? "-"}</span>
+              </div>
+              <div class="match-row">
+                <div class="team-cell">
+                  <img src="${m.awayTeam.crest}" alt="">
+                  <span>${m.awayTeam.shortName || m.awayTeam.name}</span>
+                </div>
+                <span class="score">${ft.away ?? "-"}</span>
+              </div>
+            </div>
+            <div class="match-footer">
+              <span>1ºT: ${ht.home ?? "-"} x ${ht.away ?? "-"} | ${referee}</span>
+              <button class="pill-btn" onclick="openH2H(${m.id})">H2H</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      appContent.innerHTML = `
+        <div class="controls">
+          <label>Rodada:
+            <input type="number" min="1" max="38" value="${state.matchday}"
+              style="width:70px; padding:8px; background:var(--surface); color:#fff; border:1px solid var(--border); border-radius:8px;"
+              onchange="setMatchFilter('matchday', this.value)" placeholder="Todas">
+          </label>
+          <select onchange="setMatchFilter('matchStatus', this.value)">
+            <option value="" ${state.matchStatus === "" ? "selected" : ""}>Todos os Status</option>
+            <option value="IN_PLAY,PAUSED" ${state.matchStatus === "IN_PLAY,PAUSED" ? "selected" : ""}>Ao Vivo</option>
+            <option value="SCHEDULED,TIMED" ${state.matchStatus === "SCHEDULED,TIMED" ? "selected" : ""}>Próximos Jogos</option>
+            <option value="FINISHED" ${state.matchStatus === "FINISHED" ? "selected" : ""}>Encerrados</option>
+          </select>
+        </div>
+        <div class="matches-grid">${cards || "<p>Nenhuma partida encontrada para este filtro.</p>"}</div>
+      `;
+    }
+
+    // 3. RENDERIZA ARTILHARIA E ASSISTÊNCIAS
+    async function renderScorers() {
+      appContent.innerHTML = `<div class="loading">Carregando artilharia...</div>`;
+      const data = await fetchAPI({ comp: state.comp, type: "scorers", limit: 30 });
+      const scorers = data.scorers || [];
+
+      const rows = scorers.map((s, idx) => `
+        <tr>
+          <td class="num">${idx + 1}</td>
+          <td>
+            <strong>${s.player.name}</strong><br>
+            <small style="color:var(--muted)">${s.player.nationality} • ${s.player.position || ""}</small>
+          </td>
+          <td>
+            <div class="team-cell">
+              <img src="${s.team.crest}" alt="">
+              <span>${s.team.shortName || s.team.name}</span>
+            </div>
+          </td>
+          <td class="num"><strong>${s.goals}</strong></td>
+          <td class="num">${s.assists ?? 0}</td>
+          <td class="num">${s.penalties ?? 0}</td>
+          <td class="num">${s.playedMatches ?? "-"}</td>
+        </tr>
+      `).join("");
+
+      appContent.innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="num">#</th>
+                <th>Jogador</th>
+                <th>Clube</th>
+                <th class="num">Gols</th>
+                <th class="num">Assist.</th>
+                <th class="num">Pênaltis</th>
+                <th class="num">Jogos</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    // 4. RENDERIZA TIMES, ESTÁDIOS, TÉCNICOS E ELENCOS
+    async function renderTeams() {
+      appContent.innerHTML = `<div class="loading">Carregando clubes e elencos...</div>`;
+      const data = await fetchAPI({ comp: state.comp, type: "teams" });
+      const teams = data.teams || [];
+
+      const cards = teams.map(t => {
+        const squadHtml = (t.squad || [])
+          .map(p => `<li><span>${p.name} <small style="color:var(--muted)">(${p.nationality})</small></span><span>${p.position || "-"}</span></li>`)
+          .join("");
+
+        return `
+          <div class="team-card">
+            <div class="team-card-header">
+              <img src="${t.crest}" alt="">
+              <div>
+                <h3>${t.name}</h3>
+                <small style="color:var(--muted)">Fundação: ${t.founded || "?"} • ${t.tla || ""}</small>
+              </div>
+            </div>
+            <div class="team-details">
+              <span>🏟️ Estádio: <strong>${t.venue || "Não informado"}</strong></span>
+              <span>👔 Técnico: <strong>${t.coach?.name || "Não informado"}</strong> (${t.coach?.nationality || "-"})</span>
+              <span>🎨 Cores: ${t.clubColors || "-"}</span>
+            </div>
+            <details>
+              <summary>Ver Elenco Completo (${t.squad?.length || 0} jogadores)</summary>
+              <ul class="squad-list">${squadHtml || "<li>Elenco indisponível</li>"}</ul>
+            </details>
+          </div>
+        `;
+      }).join("");
+
+      appContent.innerHTML = `<div class="teams-grid">${cards}</div>`;
+    }
+
+    // MODAL DE CONFRONTO DIRETO (HEAD-TO-HEAD)
+    async function openH2H(matchId) {
+      const modal = document.getElementById("h2hModal");
+      const body = document.getElementById("h2hBody");
+      body.innerHTML = `<div class="loading">Buscando histórico...</div>`;
+      modal.showModal();
+
+      try {
+        const data = await fetchAPI({ type: "matchDetail", id: matchId });
+        const agg = data.aggregates || {};
+        const h2hMatches = data.head2head?.matches || [];
+
+        body.innerHTML = `
+          <p style="font-size:0.9rem; color:var(--muted)">
+            Total de jogos analisados: <strong>${agg.numberOfMatches || 0}</strong> • Total de gols: <strong>${agg.totalGoals || 0}</strong>
+          </p>
+          <div class="h2h-stats">
+            <div>
+              <strong>${agg.homeTeam?.wins ?? 0}</strong><br>
+              <small>Vitórias ${agg.homeTeam?.name || "Mandante"}</small>
+            </div>
+            <div>
+              <strong>${agg.homeTeam?.draws ?? 0}</strong><br>
+              <small>Empates</small>
+            </div>
+            <div>
+              <strong>${agg.awayTeam?.wins ?? 0}</strong><br>
+              <small>Vitórias ${agg.awayTeam?.name || "Visitante"}</small>
+            </div>
+          </div>
+          <h4 style="margin-bottom:8px;">Últimos Confrontos:</h4>
+          <ul class="squad-list">
+            ${h2hMatches.map(m => `
+              <li>
+                <span>${new Date(m.utcDate).toLocaleDateString("pt-BR")} - ${m.homeTeam.shortName} x ${m.awayTeam.shortName}</span>
+                <strong>${m.score.fullTime.home} x ${m.score.fullTime.away}</strong>
+              </li>
+            `).join("") || "<li>Sem histórico recente disponível.</li>"}
+          </ul>
+        `;
+      } catch (e) {
+        body.innerHTML = `<p>Não foi possível carregar o H2H desta partida.</p>`;
+      }
+    }
+
+    // Controles globais
+    window.setStandingType = (type) => { state.standingType = type; renderStandings(); };
+    window.setMatchFilter = (key, val) => { state[key] = val; renderMatches(); };
+    window.openH2H = openH2H;
+
+    function renderCurrentTab() {
+      if (state.tab === "standings") renderStandings();
+      if (state.tab === "matches") renderMatches();
+      if (state.tab === "scorers") renderScorers();
+      if (state.tab === "teams") renderTeams();
+    }
+
+    // Eventos de troca de aba e competição
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        state.tab = btn.dataset.tab;
+        renderCurrentTab();
+      });
+    });
+
+    compSelect.addEventListener("change", async (e) => {
+      state.comp = e.target.value;
+      state.matchday = "";
+      await loadCompetitionHeader();
+      renderCurrentTab();
+    });
+
+    // Inicialização
+    (async () => {
+      await loadCompetitionHeader();
+      renderCurrentTab();
+    })();
+  </script>
 </body>
 </html>
