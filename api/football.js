@@ -1,23 +1,31 @@
- const state = {
+const state = {
       comp: "BSA",
       tab: "standings",
       standingType: "TOTAL", // TOTAL | HOME | AWAY
       matchday: "",
       matchStatus: "",
-      cache: {} // Cache local em memória para não repetir requisições ao trocar abas
+      cache: {}
     };
 
     const appContent = document.getElementById("appContent");
     const compSelect = document.getElementById("compSelect");
 
-    // Função auxiliar para buscar da sua API serverless
+    // Função auxiliar corrigida para não quebrar se o servidor retornar texto/HTML de erro 500
     async function fetchAPI(params) {
       const query = new URLSearchParams(params).toString();
       if (state.cache[query]) return state.cache[query];
 
       const res = await fetch(`/api/football?${query}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Erro ao carregar dados");
+      const text = await res.text();
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(`Servidor retornou erro (${res.status}): ${text.slice(0, 100)}`);
+      }
+
+      if (!res.ok) throw new Error(data.error || data.message || `Erro ${res.status}`);
 
       state.cache[query] = data;
       return data;
@@ -41,7 +49,8 @@
           </div>
         `;
       } catch (err) {
-        console.error(err);
+        document.getElementById("compName").textContent = "Erro ao carregar competição";
+        document.getElementById("compMeta").textContent = err.message;
       }
     }
 
@@ -312,20 +321,29 @@
           </ul>
         `;
       } catch (e) {
-        body.innerHTML = `<p>Não foi possível carregar o H2H desta partida.</p>`;
+        body.innerHTML = `<p>Não foi possível carregar o H2H desta partida: ${e.message}</p>`;
       }
     }
 
     // Controles globais
-    window.setStandingType = (type) => { state.standingType = type; renderStandings(); };
-    window.setMatchFilter = (key, val) => { state[key] = val; renderMatches(); };
+    window.setStandingType = (type) => { state.standingType = type; renderCurrentTab(); };
+    window.setMatchFilter = (key, val) => { state[key] = val; renderCurrentTab(); };
     window.openH2H = openH2H;
 
-    function renderCurrentTab() {
-      if (state.tab === "standings") renderStandings();
-      if (state.tab === "matches") renderMatches();
-      if (state.tab === "scorers") renderScorers();
-      if (state.tab === "teams") renderTeams();
+    async function renderCurrentTab() {
+      try {
+        if (state.tab === "standings") await renderStandings();
+        if (state.tab === "matches") await renderMatches();
+        if (state.tab === "scorers") await renderScorers();
+        if (state.tab === "teams") await renderTeams();
+      } catch (err) {
+        console.error(err);
+        appContent.innerHTML = `
+          <div style="background:#450a0a; border:1px solid #dc2626; padding:20px; border-radius:8px; color:#fecaca;">
+            <strong>Erro ao carregar dados:</strong> ${err.message}
+          </div>
+        `;
+      }
     }
 
     // Eventos de troca de aba e competição
@@ -350,4 +368,3 @@
       await loadCompetitionHeader();
       renderCurrentTab();
     })();
- 
