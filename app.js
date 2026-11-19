@@ -285,95 +285,204 @@ function makeBarChart(canvasId, labels, values, label, color = "#a3e635") {
   chartInstances.push(chart);
   return chart;
 }
+// ─── Extra helpers: show as much API data as possible ───
+
+const esc = (v) => escapeHtml(v);
+
+function ageFrom(iso) {
+  if (!iso) return null;
+  const b = new Date(iso);
+  if (isNaN(b)) return null;
+  const n = new Date();
+  let a = n.getFullYear() - b.getFullYear();
+  const m = n.getMonth() - b.getMonth();
+  if (m < 0 || (m === 0 && n.getDate() < b.getDate())) a--;
+  return a;
+}
+
+function formatDay(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return isNaN(d) ? esc(iso) : d.toLocaleDateString("pt-BR");
+}
+
+function prettyEnum(v) {
+  if (!v) return "";
+  return String(v)
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/(^|\s)\w/g, (c) => c.toUpperCase());
+}
+
+// value is escaped unless raw === true (then the caller already escaped it)
+function detailItem(label, value, raw = false) {
+  const empty = value === null || value === undefined || value === "";
+  const shown = empty ? "—" : raw ? value : esc(value);
+  return `<div class="detail-item"><div class="label">${esc(label)}</div><div class="value">${shown}</div></div>`;
+}
+
+function statCard(icon, color, label, value, delta) {
+  return `
+    <div class="stat-card">
+      <div class="stat-label"><span class="stat-icon ${color}">${icon}</span>${esc(label)}</div>
+      <div class="stat-value">${esc(value)}</div>
+      <div class="stat-delta neutral">${esc(delta || "")}</div>
+    </div>`;
+}
+
+function scoreText(m) {
+  const withScore = ["FINISHED", "IN_PLAY", "PAUSED", "AWARDED"].includes(m.status);
+  if (!withScore) return "vs";
+  const ft = m.score?.fullTime || {};
+  return `${ft.home ?? ft.homeTeam ?? "–"} × ${ft.away ?? ft.awayTeam ?? "–"}`;
+}
+
+function scoreBreakdown(m) {
+  const s = m.score || {};
+  const fmt = (o) => (o && (o.home != null || o.away != null) ? `${o.home ?? "–"}×${o.away ?? "–"}` : null);
+  const parts = [];
+  const ht = fmt(s.halfTime);
+  if (ht) parts.push(`Half-time ${ht}`);
+  const et = fmt(s.extraTime);
+  if (et) parts.push(`Extra time ${et}`);
+  const pen = fmt(s.penalties);
+  if (pen) parts.push(`Penalties ${pen}`);
+  return parts;
+}
+
+function matchCardHtml(m, showComp = false) {
+  const home = m.homeTeam?.shortName || m.homeTeam?.name || "—";
+  const away = m.awayTeam?.shortName || m.awayTeam?.name || "—";
+  const winner = m.score?.winner;
+  const tags = [];
+  if (showComp && m.competition?.name) tags.push(m.competition.name);
+  if (m.stage && m.stage !== "REGULAR_SEASON") tags.push(prettyEnum(m.stage));
+  if (m.group) tags.push(prettyEnum(m.group));
+  if (m.matchday) tags.push(`MD ${m.matchday}`);
+  const extra = scoreBreakdown(m);
+
+  return `
+    <div class="match-card" data-match-id="${esc(m.id)}" data-search="${esc(`${home} ${away}`.toLowerCase())}">
+      <div class="match-team home${winner === "HOME_TEAM" ? " winner" : ""}"><span>${esc(home)}</span>${crest(m.homeTeam?.crest)}</div>
+      <div class="match-score">${scoreText(m)}</div>
+      <div class="match-team away${winner === "AWAY_TEAM" ? " winner" : ""}">${crest(m.awayTeam?.crest)}<span>${esc(away)}</span></div>
+      <div class="match-meta">
+        ${formatDate(m.utcDate)} · ${statusBadge(m.status)}
+        ${tags.length ? ` · ${tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}` : ""}
+        ${extra.length ? `<div class="match-extra">${esc(extra.join(" · "))}</div>` : ""}
+      </div>
+    </div>`;
+}
+
+function bindMatchCards(root) {
+  root.querySelectorAll("[data-match-id]").forEach((el) => {
+    el.addEventListener("click", () => showMatch(el.dataset.matchId));
+  });
+}
+
+function formPills(form) {
+  if (!form) return "";
+  const s = String(form);
+  const arr = s.includes(",") ? s.split(",") : s.split("");
+  return `<div class="form-pills">${arr
+    .slice(-5)
+    .map((c) => `<span class="form-pill ${esc(c)}">${esc(c)}</span>`)
+    .join("")}</div>`;
+}
+
+function makeGroupedBarChart(canvasId, labels, datasets) {
+  const ctx = document.getElementById(canvasId);
+  if (!ctx || typeof Chart === "undefined") return;
+
+  const chart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: datasets.map((d) => ({
+        label: d.label,
+        data: d.data,
+        backgroundColor: d.color,
+        borderRadius: 6,
+        maxBarThickness: 22,
+      })),
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, labels: { color: "#8b95a5", boxWidth: 12, font: { size: 11 } } },
+        tooltip: { backgroundColor: "#1a2029", padding: 10, cornerRadius: 8 },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: "#8b95a5", font: { size: 10 }, maxRotation: 45, minRotation: 0 },
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: "rgba(255,255,255,0.05)" },
+          ticks: { color: "#8b95a5", font: { size: 11 }, precision: 0 },
+        },
+      },
+    },
+  });
+  chartInstances.push(chart);
+  return chart;
+}
+
+function injectExtraStyles() {
+  if (document.getElementById("kickoff-extra-styles")) return;
+  const s = document.createElement("style");
+  s.id = "kickoff-extra-styles";
+  s.textContent = `
+    .tag{display:inline-flex;align-items:center;gap:.3rem;padding:.1rem .5rem;margin:0 .25rem .25rem 0;border:1px solid var(--border);border-radius:999px;font-size:.7rem;color:var(--text-muted)}
+    .tag .crest{width:14px;height:14px}
+    .match-extra{margin-top:.25rem;font-size:.72rem;color:var(--text-muted)}
+    .match-team.winner span{font-weight:700}
+    tr.fav-row td{background:rgba(163,230,53,.07)}
+    .mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.5rem;margin:.75rem 0}
+    .section-title{margin:1.25rem 0 .5rem}
+    .squad-group{margin:1rem 0 .35rem;font-size:.8rem;color:var(--text-muted);font-weight:600}
+    .event-row{display:flex;gap:.6rem;padding:.35rem 0;border-bottom:1px solid var(--border);font-size:.85rem}
+    .event-min{min-width:3rem;color:var(--text-muted)}
+    .event-sub{color:var(--text-muted);font-size:.78rem}
+    .lineup-cols{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+    @media (max-width:640px){.lineup-cols{grid-template-columns:1fr}}
+    .filter-input{width:100%;margin:0 0 1rem;padding:.55rem .75rem;border:1px solid var(--border);border-radius:8px;background:transparent;color:inherit;font:inherit}
+    .note{font-size:.78rem;color:var(--text-muted);margin:.75rem 0}
+  `;
+  document.head.appendChild(s);
+}
+injectExtraStyles();
+
 // ─── Renderers ─────────────────────────────────────
 
-function renderStandings(data) {
-  destroyCharts();
-  const tables = data.standings || [];
-  if (!tables.length) {
-    content.innerHTML = `<div class="empty">No standings available.</div>`;
-    return;
-  }
+let standingsView = "TOTAL";
 
-  const total = tables.find((t) => t.type === "TOTAL") || tables[0];
-  const rows = total.table || [];
-  const top = rows.slice(0, 10);
-  const chartLabels = top.map((r) => r.team.shortName || r.team.name || "?");
-  const chartPoints = top.map((r) => r.points);
-
-  const leader = rows[0];
-  const totalGoals = rows.reduce((s, r) => s + (r.goalsFor || 0), 0);
-  const totalPlayed = rows.reduce((s, r) => s + (r.playedGames || 0), 0);
-  const totalWins = rows.reduce((s, r) => s + (r.won || 0), 0);
-  const winRate = totalPlayed ? Math.round((totalWins / totalPlayed) * 100) : 0;
-
+function standingsTableHtml(rows, showForm) {
+  const fav = getFavorite();
   let html = `
-    <div class="hero-card">
-      <div class="hero-content">
-        <div class="hero-badge">${data.competition?.name || "League"}</div>
-        <div class="hero-title">Every match is a<br><span>new opportunity.</span></div>
-        <div class="hero-meta">${data.season?.startDate?.slice(0, 4) || ""} season · ${rows.length} teams</div>
-        ${
-          leader
-            ? `<div class="hero-match">
-                <div class="hero-team">
-                  <div class="hero-team-badge home">${(leader.team.tla || leader.team.shortName || "?").slice(0, 3)}</div>
-                  <span>${leader.team.shortName || leader.team.name}</span>
-                </div>
-                <span class="hero-vs">leads the table</span>
-              </div>`
-            : ""
-        }
-      </div>
-      <div class="hero-visual"></div>
-      <div class="hero-countdown">01 · 00 · 00</div>
-    </div>
-
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-label"><span class="stat-icon green">🏆</span>League position</div>
-        <div class="stat-value">1st</div>
-        <div class="stat-delta up">Leader · ${leader?.team?.shortName || "—"}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label"><span class="stat-icon purple">⚽</span>Goals scored</div>
-        <div class="stat-value">${totalGoals}</div>
-        <div class="stat-delta neutral">Across ${rows.length} teams</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label"><span class="stat-icon yellow">📊</span>Win rate</div>
-        <div class="stat-value">${winRate}%</div>
-        <div class="stat-delta neutral">League average</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label"><span class="stat-icon blue">👥</span>Teams</div>
-        <div class="stat-value">${rows.length}</div>
-        <div class="stat-delta neutral">In competition</div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Table · ${data.competition?.name || ""} · ${data.season?.startDate?.slice(0, 4) || ""}</h2>
-      <div class="chart-box"><canvas id="chartPoints"></canvas></div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th>
-              <th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th><th></th>
-            </tr>
-          </thead>
-          <tbody>
-  `;
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th>
+            <th>GF</th><th>GA</th><th>GD</th><th>Pts</th><th>Pts/G</th>
+            ${showForm ? "<th>Form</th>" : ""}<th></th>
+          </tr>
+        </thead>
+        <tbody>`;
 
   rows.forEach((r) => {
+    const isFav = fav && String(fav.id) === String(r.team.id);
+    const ppg = r.playedGames ? (r.points / r.playedGames).toFixed(2) : "—";
     html += `
-      <tr class="clickable" data-team-id="${r.team.id}">
+      <tr class="clickable${isFav ? " fav-row" : ""}" data-team-id="${r.team.id}">
         <td class="pos">${r.position}</td>
         <td>
           <div class="team-cell">
             ${crest(r.team.crest, r.team.name)}
-            <span>${r.team.shortName || r.team.name}</span>
+            <span>${esc(r.team.shortName || r.team.name)}</span>
           </div>
         </td>
         <td>${r.playedGames}</td>
@@ -384,15 +493,164 @@ function renderStandings(data) {
         <td>${r.goalsAgainst}</td>
         <td>${r.goalDifference > 0 ? "+" : ""}${r.goalDifference}</td>
         <td class="pts">${r.points}</td>
+        <td>${ppg}</td>
+        ${showForm ? `<td>${formPills(r.form)}</td>` : ""}
         <td>${heartBtn(r.team.id)}</td>
-      </tr>
-    `;
+      </tr>`;
   });
 
-  html += `</tbody></table></div></div>`;
+  return html + `</tbody></table></div>`;
+}
+
+function renderStandings(data) {
+  destroyCharts();
+  const all = data.standings || [];
+  if (!all.length) {
+    content.innerHTML = `<div class="empty">No standings available.</div>`;
+    return;
+  }
+
+  const typeOf = (t) => t.type || "TOTAL";
+  const hasSplit =
+    all.some((t) => typeOf(t) === "HOME") && all.some((t) => typeOf(t) === "AWAY");
+  if (!hasSplit || !all.some((t) => typeOf(t) === standingsView)) standingsView = "TOTAL";
+
+  let view = all.filter((t) => typeOf(t) === standingsView);
+  if (!view.length) view = [all[0]];
+  const single = view.length === 1;
+  const rows = view[0].table || [];
+  const showForm = view.some((t) => (t.table || []).some((r) => r.form));
+
+  // Stats are always computed from the TOTAL tables (all groups together)
+  const totals = all.filter((t) => typeOf(t) === "TOTAL");
+  const statRows = (totals.length ? totals : [all[0]]).flatMap((t) => t.table || []);
+  const homeRows = all.filter((t) => typeOf(t) === "HOME").flatMap((t) => t.table || []);
+  const leaderTable = (totals[0] || all[0]).table || [];
+  const leader = leaderTable[0];
+  const second = leaderTable[1];
+
+  const sum = (arr, k) => arr.reduce((s, r) => s + (r[k] || 0), 0);
+  const totalGoals = sum(statRows, "goalsFor");
+  const totalPlayed = sum(statRows, "playedGames");
+  const totalMatches = Math.round(totalPlayed / 2);
+  const gpg = totalMatches ? (totalGoals / totalMatches).toFixed(2) : "0";
+  const pct = (n, d) => (d ? Math.round((n / d) * 100) : 0);
+  const drawRate = pct(sum(statRows, "draw"), totalPlayed);
+
+  const played = statRows.filter((r) => r.playedGames > 0);
+  const bestAttack = [...played].sort((a, b) => b.goalsFor - a.goalsFor)[0];
+  const bestDefense = [...played].sort((a, b) => a.goalsAgainst - b.goalsAgainst)[0];
+
+  const fav = getFavorite();
+  const favRow = fav && statRows.find((r) => String(r.team.id) === String(fav.id));
+
+  let splitCard;
+  if (homeRows.length) {
+    const hp = sum(homeRows, "playedGames");
+    splitCard = statCard(
+      "📊", "yellow", "Home · Draw · Away",
+      `${pct(sum(homeRows, "won"), hp)}% · ${pct(sum(homeRows, "draw"), hp)}% · ${pct(sum(homeRows, "lost"), hp)}%`,
+      "Share of results"
+    );
+  } else {
+    splitCard = statCard("📊", "yellow", "Draw rate", `${drawRate}%`, "Of all matches played");
+  }
+
+  const comp = data.competition || {};
+  const season = data.season || {};
+  const sy = season.startDate?.slice(0, 4);
+  const ey = season.endDate?.slice(0, 4);
+  const seasonLabel = sy ? (ey && ey !== sy ? `${sy}/${ey.slice(2)}` : sy) : "";
+  const metaParts = [
+    seasonLabel && `${seasonLabel} season`,
+    `${statRows.length} teams`,
+    data.area?.name,
+    season.startDate && `${formatDay(season.startDate)} – ${formatDay(season.endDate)}`,
+  ].filter(Boolean);
+
+  let html = `
+    <div class="hero-card">
+      <div class="hero-content">
+        <div class="hero-badge">${esc(comp.name || "League")}${comp.code ? ` · ${esc(comp.code)}` : ""}</div>
+        <div class="hero-title">Every match is a<br><span>new opportunity.</span></div>
+        <div class="hero-meta">${esc(metaParts.join(" · "))}</div>
+        ${
+          leader
+            ? `<div class="hero-match">
+                <div class="hero-team">
+                  <div class="hero-team-badge home">${esc((leader.team.tla || leader.team.shortName || "?").slice(0, 3))}</div>
+                  <span>${esc(leader.team.shortName || leader.team.name)}</span>
+                </div>
+                <span class="hero-vs">leads the table · ${leader.points} pts</span>
+              </div>`
+            : ""
+        }
+      </div>
+      <div class="hero-visual"></div>
+      <div class="hero-countdown">${season.currentMatchday ? `Matchday ${season.currentMatchday}` : ""}</div>
+    </div>
+
+    <div class="stats-row">
+      ${
+        favRow
+          ? statCard("♥", "green", "Your team", `#${favRow.position}`, `${favRow.team.shortName || favRow.team.name} · ${favRow.points} pts`)
+          : statCard("🏆", "green", "League leader", "1st", `${leader?.team?.shortName || "—"} · ${leader?.points ?? 0} pts`)
+      }
+      ${statCard("⚽", "purple", "Goals scored", totalGoals, `${gpg} per match · ${totalMatches} matches`)}
+      ${splitCard}
+      ${statCard("👥", "blue", "Teams", statRows.length, totals.length > 1 ? `${totals.length} groups` : "In competition")}
+      ${statCard("🔥", "green", "Best attack", bestAttack?.goalsFor ?? "—", bestAttack?.team?.shortName || "")}
+      ${statCard("🧱", "blue", "Best defense", bestDefense ? `${bestDefense.goalsAgainst} GA` : "—", bestDefense?.team?.shortName || "")}
+      ${statCard("📏", "yellow", "Gap to 2nd", leader && second ? `${leader.points - second.points} pts` : "—", second ? `${second.team.shortName || second.team.name}` : "")}
+      ${statCard("🗓", "purple", "Matchday", season.currentMatchday ?? "—", season.winner?.name ? `Last champion: ${season.winner.name}` : "Current round")}
+    </div>
+
+    <div class="card">
+      <h2>Table · ${esc(comp.name || "")} · ${esc(seasonLabel)}</h2>
+      ${
+        hasSplit
+          ? `<div class="filters" id="standingsView">
+              <button data-view="TOTAL" class="${standingsView === "TOTAL" ? "active" : ""}">Total</button>
+              <button data-view="HOME" class="${standingsView === "HOME" ? "active" : ""}">Home</button>
+              <button data-view="AWAY" class="${standingsView === "AWAY" ? "active" : ""}">Away</button>
+            </div>`
+          : ""
+      }
+      ${
+        single && rows.length
+          ? `<div class="chart-box"><canvas id="chartPoints"></canvas></div>
+             <div class="chart-box"><canvas id="chartGoalsForAgainst"></canvas></div>`
+          : ""
+      }
+  `;
+
+  view.forEach((t) => {
+    const heading = [t.stage && t.stage !== "REGULAR_SEASON" ? prettyEnum(t.stage) : "", t.group ? prettyEnum(t.group) : ""]
+      .filter(Boolean)
+      .join(" · ");
+    if (heading) html += `<h3 class="section-title">${esc(heading)}</h3>`;
+    html += standingsTableHtml(t.table || [], showForm);
+  });
+
+  html += `</div>`;
   content.innerHTML = html;
 
-  makeBarChart("chartPoints", chartLabels, chartPoints, "Points");
+  if (single && rows.length) {
+    const top = rows.slice(0, 10);
+    const labels = top.map((r) => r.team.shortName || r.team.name || "?");
+    makeBarChart("chartPoints", labels, top.map((r) => r.points), "Points");
+    makeGroupedBarChart("chartGoalsForAgainst", labels, [
+      { label: "Goals for", data: top.map((r) => r.goalsFor), color: "#22c55e" },
+      { label: "Goals against", data: top.map((r) => r.goalsAgainst), color: "#ef4444" },
+    ]);
+  }
+
+  content.querySelectorAll("#standingsView button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      standingsView = btn.dataset.view;
+      renderStandings(data);
+    });
+  });
 
   content.querySelectorAll("[data-team-id]").forEach((row) => {
     row.addEventListener("click", (e) => {
@@ -411,23 +669,58 @@ function renderScorers(data) {
     return;
   }
 
-  const top = scorers.slice(0, 12);
+  const top = scorers.slice(0, 15);
   const labels = top.map((s) => (s.player?.name || "?").split(" ").pop());
-  const goals = top.map((s) => s.goals ?? 0);
+  const hasAssists = scorers.some((s) => s.assists != null);
+
+  const totalGoals = scorers.reduce((a, s) => a + (s.goals || 0), 0);
+  const totalPens = scorers.reduce((a, s) => a + (s.penalties || 0), 0);
+  const topScorer = scorers[0];
+  const topAssist = hasAssists
+    ? [...scorers].sort((a, b) => (b.assists || 0) - (a.assists || 0))[0]
+    : null;
+  const perGame = (s) => (s.playedMatches ? ((s.goals || 0) / s.playedMatches).toFixed(2) : "—");
 
   let html = `
+    <div class="stats-row">
+      ${statCard("⚽", "green", "Top scorer", topScorer.goals ?? "—", `${topScorer.player?.name || "—"} · ${topScorer.team?.shortName || topScorer.team?.name || ""}`)}
+      ${
+        topAssist
+          ? statCard("🎯", "purple", "Most assists", topAssist.assists ?? 0, `${topAssist.player?.name || "—"} · ${topAssist.team?.shortName || ""}`)
+          : statCard("🎯", "purple", "Best goals/game", perGame(topScorer), topScorer.player?.name || "")
+      }
+      ${statCard("📈", "blue", "Goals by listed players", totalGoals, `${scorers.length} players`)}
+      ${statCard("🥅", "yellow", "Penalties", totalPens, totalGoals ? `${Math.round((totalPens / totalGoals) * 100)}% of goals` : "")}
+    </div>
+
     <div class="card">
-      <h2>Top Scorers · ${data.competition?.name || ""}</h2>
+      <h2>Top Scorers · ${esc(data.competition?.name || "")}</h2>
       <div class="chart-box"><canvas id="chartGoals"></canvas></div>
   `;
 
   scorers.forEach((s, i) => {
+    const p = s.player || {};
+    const age = ageFrom(p.dateOfBirth);
+    const line1 = [s.team?.name, p.nationality, p.position, age != null ? `${age} yrs` : "", s.playedMatches != null ? `${s.playedMatches} games` : ""]
+      .filter(Boolean)
+      .map(esc)
+      .join(" · ");
+    const line2 = [
+      s.assists != null ? `${s.assists} assists` : "",
+      s.penalties != null ? `${s.penalties} pens` : "",
+      `${perGame(s)} goals/game`,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+
     html += `
-      <div class="scorer-row" data-person-id="${s.player?.id || ""}">
+      <div class="scorer-row" data-person-id="${esc(p.id || "")}">
         <div class="scorer-rank">${i + 1}</div>
+        ${crest(s.team?.crest, s.team?.name)}
         <div class="scorer-info">
-          <div class="scorer-name">${s.player?.name || "—"}</div>
-          <div class="scorer-team">${s.team?.name || ""}</div>
+          <div class="scorer-name">${esc(p.name || "—")}</div>
+          <div class="scorer-team">${line1}</div>
+          <div class="scorer-team">${esc(line2)}</div>
         </div>
         <div class="scorer-goals">${s.goals ?? "—"}</div>
       </div>
@@ -437,7 +730,9 @@ function renderScorers(data) {
   html += `</div>`;
   content.innerHTML = html;
 
-  makeBarChart("chartGoals", labels, goals, "Goals", "#22c55e");
+  const datasets = [{ label: "Goals", data: top.map((s) => s.goals ?? 0), color: "#22c55e" }];
+  if (hasAssists) datasets.push({ label: "Assists", data: top.map((s) => s.assists ?? 0), color: "#a3e635" });
+  makeGroupedBarChart("chartGoals", labels, datasets);
 
   content.querySelectorAll("[data-person-id]").forEach((el) => {
     if (el.dataset.personId) {
@@ -446,64 +741,75 @@ function renderScorers(data) {
   });
 }
 
-function renderMatches(data, title = "Matches") {
+function renderMatches(data, title = "Matches", baseParams = null) {
   destroyCharts();
-  const matches = data.matches || [];
-  if (!matches.length) {
+  const params0 = baseParams || { type: "matches", comp: currentComp };
+  const activeStatus = params0.status ?? "";
+  const matches = [...(data.matches || [])];
+
+  if (!matches.length && !baseParams) {
     content.innerHTML = `<div class="empty">No matches found.</div>`;
     return;
   }
 
+  matches.sort((a, b) =>
+    activeStatus === "FINISHED"
+      ? new Date(b.utcDate) - new Date(a.utcDate)
+      : new Date(a.utcDate) - new Date(b.utcDate)
+  );
+
+  const finished = matches.filter((m) => m.status === "FINISHED");
+  const goals = finished.reduce(
+    (s, m) => s + (m.score?.fullTime?.home ?? 0) + (m.score?.fullTime?.away ?? 0),
+    0
+  );
+  const rs = data.resultSet;
+  const summary = [
+    `${matches.length} matches`,
+    rs?.played != null ? `${rs.played} played in the season` : "",
+    finished.length ? `${goals} goals · ${(goals / finished.length).toFixed(2)} per match` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  const btn = (status, label) =>
+    `<button data-status="${status}" class="${activeStatus === status ? "active" : ""}">${label}</button>`;
+
   let html = `
     <div class="card">
-      <h2>${title}</h2>
+      <h2>${esc(title)}</h2>
+      <p class="note">${esc(summary)}</p>
       <div class="filters" id="matchFilters">
-        <button data-status="SCHEDULED,TIMED" class="active">Upcoming</button>
-        <button data-status="FINISHED">Finished</button>
-        <button data-status="IN_PLAY,PAUSED">Live</button>
-        <button data-status="">All</button>
+        ${btn("SCHEDULED,TIMED", "Upcoming")}
+        ${btn("FINISHED", "Finished")}
+        ${btn("IN_PLAY,PAUSED", "Live")}
+        ${btn("", "All")}
       </div>
+      <input class="filter-input" id="matchSearch" type="search" placeholder="Filter by team…" />
       <div class="match-list" id="matchList">
-  `;
-
-  matches.forEach((m) => {
-    const home = m.homeTeam?.shortName || m.homeTeam?.name || "—";
-    const away = m.awayTeam?.shortName || m.awayTeam?.name || "—";
-    const score =
-      m.status === "FINISHED" || m.status === "IN_PLAY" || m.status === "PAUSED"
-        ? `${m.score?.fullTime?.home ?? m.score?.fullTime?.homeTeam ?? "–"} × ${m.score?.fullTime?.away ?? m.score?.fullTime?.awayTeam ?? "–"}`
-        : "vs";
-
-    html += `
-      <div class="match-card" data-match-id="${m.id}">
-        <div class="match-team home"><span>${home}</span>${crest(m.homeTeam?.crest)}</div>
-        <div class="match-score">${score}</div>
-        <div class="match-team away">${crest(m.awayTeam?.crest)}<span>${away}</span></div>
-        <div class="match-meta">
-          ${formatDate(m.utcDate)} · ${statusBadge(m.status)}
-          ${m.matchday ? ` · MD ${m.matchday}` : ""}
-        </div>
+        ${matches.length ? matches.map((m) => matchCardHtml(m, !!baseParams && baseParams.type !== "matches")).join("") : `<div class="empty">No matches for this filter.</div>`}
       </div>
-    `;
-  });
-
-  html += `</div></div>`;
+    </div>
+  `;
   content.innerHTML = html;
 
-  content.querySelectorAll("[data-match-id]").forEach((el) => {
-    el.addEventListener("click", () => showMatch(el.dataset.matchId));
+  bindMatchCards(content);
+
+  document.getElementById("matchSearch").addEventListener("input", (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    content.querySelectorAll("#matchList .match-card").forEach((el) => {
+      el.style.display = !q || (el.dataset.search || "").includes(q) ? "" : "none";
+    });
   });
 
-  document.querySelectorAll("#matchFilters button").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      document.querySelectorAll("#matchFilters button").forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-      const status = btn.dataset.status;
+  document.querySelectorAll("#matchFilters button").forEach((b) => {
+    b.addEventListener("click", async () => {
+      const params = { ...params0 };
+      delete params.status;
+      if (b.dataset.status) params.status = b.dataset.status;
       try {
-        const params = { type: "matches", comp: currentComp };
-        if (status) params.status = status;
         const d = await api(params);
-        renderMatches(d, title);
+        renderMatches(d, title, params);
       } catch (e) {
         showError(e.message);
       }
@@ -519,19 +825,26 @@ function renderTeams(data) {
     return;
   }
 
+  const season = data.season || {};
   let html = `
     <div class="card">
-      <h2>Squads · ${data.competition?.name || ""}</h2>
+      <h2>Squads · ${esc(data.competition?.name || "")}</h2>
+      <p class="note">${teams.length} teams${season.startDate ? ` · season ${esc(season.startDate.slice(0, 4))}` : ""}</p>
+      <input class="filter-input" id="teamSearch" type="search" placeholder="Filter teams…" />
       <div class="teams-grid">
   `;
 
   teams.forEach((t) => {
+    const sub = [t.tla, t.founded ? `Founded ${t.founded}` : "", t.area?.name].filter(Boolean).map(esc).join(" · ");
     html += `
-      <div class="team-card" data-team-id="${t.id}">
+      <div class="team-card" data-team-id="${t.id}" data-search="${esc(`${t.name} ${t.shortName || ""} ${t.tla || ""}`.toLowerCase())}">
         ${crest(t.crest, t.name)}
         <div>
-          <div class="name">${t.shortName || t.name}</div>
-          <div class="tla">${t.tla || ""}</div>
+          <div class="name">${esc(t.shortName || t.name)}</div>
+          <div class="tla">${sub}</div>
+          ${t.venue ? `<div class="tla">${esc(t.venue)}</div>` : ""}
+          ${t.coach?.name ? `<div class="tla">Coach: ${esc(t.coach.name)}</div>` : ""}
+          ${t.squad?.length ? `<div class="tla">${t.squad.length} players</div>` : ""}
         </div>
         ${heartBtn(t.id)}
       </div>
@@ -541,6 +854,13 @@ function renderTeams(data) {
   html += `</div></div>`;
   content.innerHTML = html;
 
+  document.getElementById("teamSearch").addEventListener("input", (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    content.querySelectorAll(".team-card").forEach((el) => {
+      el.style.display = !q || (el.dataset.search || "").includes(q) ? "" : "none";
+    });
+  });
+
   content.querySelectorAll("[data-team-id]").forEach((el) => {
     el.addEventListener("click", (e) => {
       if (e.target.closest(".btn-heart")) return;
@@ -549,6 +869,7 @@ function renderTeams(data) {
   });
   bindHeartButtons(content);
 }
+
 function renderTrends(data) {
   destroyCharts();
   const trends = data.trends || [];
@@ -679,40 +1000,32 @@ function renderToday(data) {
   const byComp = {};
   matches.forEach((m) => {
     const code = m.competition?.code || m.competition?.name || "Other";
-    if (!byComp[code]) byComp[code] = [];
-    byComp[code].push(m);
+    (byComp[code] = byComp[code] || []).push(m);
   });
 
-  let html = `<div class="card"><h2>Today's matches</h2>`;
+  const live = matches.filter((m) => ["IN_PLAY", "PAUSED"].includes(m.status)).length;
+  const done = matches.filter((m) => m.status === "FINISHED").length;
 
-  Object.entries(byComp).forEach(([, list]) => {
-    html += `<h3>${list[0].competition?.name || "—"}</h3><div class="match-list">`;
-    list.forEach((m) => {
-      const home = m.homeTeam?.shortName || m.homeTeam?.name || "—";
-      const away = m.awayTeam?.shortName || m.awayTeam?.name || "—";
-      const score =
-        m.status === "FINISHED" || m.status === "IN_PLAY"
-          ? `${m.score?.fullTime?.home ?? "–"} × ${m.score?.fullTime?.away ?? "–"}`
-          : "vs";
+  let html = `
+    <div class="card">
+      <h2>Today's matches</h2>
+      <p class="note">${matches.length} matches · ${live} live · ${done} finished · ${Object.keys(byComp).length} competitions</p>
+  `;
 
-      html += `
-        <div class="match-card" data-match-id="${m.id}">
-          <div class="match-team home"><span>${home}</span>${crest(m.homeTeam?.crest)}</div>
-          <div class="match-score">${score}</div>
-          <div class="match-team away">${crest(m.awayTeam?.crest)}<span>${away}</span></div>
-          <div class="match-meta">${formatDate(m.utcDate)} · ${statusBadge(m.status)}</div>
-        </div>
-      `;
-    });
+  Object.values(byComp).forEach((list) => {
+    const c = list[0].competition || {};
+    html += `<h3 class="section-title">${crest(c.emblem)} ${esc(c.name || "—")}${c.type ? ` <span class="tag">${esc(prettyEnum(c.type))}</span>` : ""}</h3><div class="match-list">`;
+    list
+      .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate))
+      .forEach((m) => {
+        html += matchCardHtml(m);
+      });
     html += `</div>`;
   });
 
   html += `</div>`;
   content.innerHTML = html;
-
-  content.querySelectorAll("[data-match-id]").forEach((el) => {
-    el.addEventListener("click", () => showMatch(el.dataset.matchId));
-  });
+  bindMatchCards(content);
 }
 
 function renderSearch() {
@@ -811,47 +1124,165 @@ function renderSearch() {
 // ─── Details (modal) ───────────────────────────────
 // ─── Details (modal) ───────────────────────────────
 
+const POSITION_ORDER = ["Goalkeeper", "Defence", "Defender", "Midfield", "Midfielder", "Offence", "Attacker", "Forward"];
+
+function fillTeamForm(box, t, matches) {
+  const byDate = (a, b) => new Date(a.utcDate) - new Date(b.utcDate);
+  const done = matches.filter((m) => m.status === "FINISHED").sort(byDate);
+  const next = matches.filter((m) => ["SCHEDULED", "TIMED"].includes(m.status)).sort(byDate).slice(0, 5);
+
+  if (!done.length && !next.length) {
+    box.innerHTML = `<p class="empty">No matches returned for this team.</p>`;
+    return;
+  }
+
+  const st = { w: 0, d: 0, l: 0, gf: 0, ga: 0, cs: 0, hw: 0, hd: 0, hl: 0, aw: 0, ad: 0, al: 0 };
+  const results = [];
+
+  done.forEach((m) => {
+    const isHome = m.homeTeam?.id === t.id;
+    const ft = m.score?.fullTime || {};
+    const gf = isHome ? ft.home : ft.away;
+    const ga = isHome ? ft.away : ft.home;
+    if (gf == null || ga == null) return;
+
+    const r = gf > ga ? "W" : gf < ga ? "L" : "D";
+    results.push(r);
+    st.gf += gf;
+    st.ga += ga;
+    if (ga === 0) st.cs++;
+    const k = r === "W" ? "w" : r === "D" ? "d" : "l";
+    st[k]++;
+    st[(isHome ? "h" : "a") + k]++;
+  });
+
+  const played = results.length;
+  const pts = st.w * 3 + st.d;
+  const avg = (n) => (played ? (n / played).toFixed(2) : "—");
+  const last5 = results.slice(-5);
+
+  let html = `
+    ${last5.length ? `<div class="form-pills" style="margin-bottom:.5rem">${last5.map((r) => `<span class="form-pill ${r}">${r}</span>`).join("")}</div>` : ""}
+    <div class="mini-grid">
+      ${detailItem("Played", played)}
+      ${detailItem("W · D · L", `${st.w} · ${st.d} · ${st.l}`)}
+      ${detailItem("Goals for · against", `${st.gf} · ${st.ga}`)}
+      ${detailItem("Points", `${pts} (${avg(pts)}/game)`)}
+      ${detailItem("Goals for / game", avg(st.gf))}
+      ${detailItem("Goals against / game", avg(st.ga))}
+      ${detailItem("Clean sheets", st.cs)}
+      ${detailItem("Home W · D · L", `${st.hw} · ${st.hd} · ${st.hl}`)}
+      ${detailItem("Away W · D · L", `${st.aw} · ${st.ad} · ${st.al}`)}
+    </div>
+  `;
+
+  if (done.length) {
+    html += `<h4 class="squad-group">Latest results</h4><div class="match-list">${done
+      .slice(-5)
+      .reverse()
+      .map((m) => matchCardHtml(m, true))
+      .join("")}</div>`;
+  }
+  if (next.length) {
+    html += `<h4 class="squad-group">Next matches</h4><div class="match-list">${next
+      .map((m) => matchCardHtml(m, true))
+      .join("")}</div>`;
+  }
+
+  box.innerHTML = html;
+  bindMatchCards(box);
+}
+
 async function showTeam(id) {
   try {
     const t = await api({ type: "team", id });
     const favActive = isFavorite(t.id);
+    const squad = t.squad || [];
 
-    let squadHtml = "";
-    if (t.squad?.length) {
-      squadHtml = `
-        <h3>Squad (${t.squad.length})</h3>
-        <div class="squad-list">
-          ${t.squad
-            .map(
-              (p) => `
-            <div class="squad-item" data-person-id="${p.id}">
-              <span>${p.name}</span>
-              <span class="squad-pos">${p.position || p.role || ""} ${p.nationality ? "· " + p.nationality : ""}</span>
-            </div>
-          `
-            )
-            .join("")}
-        </div>
-      `;
-    }
+    const groups = {};
+    squad.forEach((p) => {
+      const key = p.position || "Other";
+      (groups[key] = groups[key] || []).push(p);
+    });
+    const keys = Object.keys(groups).sort((a, b) => {
+      const ia = POSITION_ORDER.indexOf(a);
+      const ib = POSITION_ORDER.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    });
+
+    const ages = squad.map((p) => ageFrom(p.dateOfBirth)).filter((a) => a != null);
+    const avgAge = ages.length ? (ages.reduce((a, b) => a + b, 0) / ages.length).toFixed(1) : null;
+    const nations = new Set(squad.map((p) => p.nationality).filter(Boolean));
+
+    const squadHtml = squad.length
+      ? `<h3 class="section-title">Squad (${squad.length})</h3>` +
+        keys
+          .map(
+            (k) => `
+          <h4 class="squad-group">${esc(k)} (${groups[k].length})</h4>
+          <div class="squad-list">
+            ${groups[k]
+              .map((p) => {
+                const age = ageFrom(p.dateOfBirth);
+                const info = [age != null ? `${age} yrs` : "", p.nationality, p.shirtNumber ? `#${p.shirtNumber}` : ""]
+                  .filter(Boolean)
+                  .map(esc)
+                  .join(" · ");
+                return `<div class="squad-item" data-person-id="${esc(p.id)}"><span>${esc(p.name)}</span><span class="squad-pos">${info}</span></div>`;
+              })
+              .join("")}
+          </div>`
+          )
+          .join("")
+      : "";
+
+    const staffHtml = t.staff?.length
+      ? `<h3 class="section-title">Staff</h3><div class="squad-list">${t.staff
+          .map((s) => `<div class="squad-item"><span>${esc(s.name)}</span><span class="squad-pos">${esc([s.role, s.nationality].filter(Boolean).join(" · "))}</span></div>`)
+          .join("")}</div>`
+      : "";
+
+    const comps = (t.runningCompetitions || [])
+      .map((c) => `<span class="tag">${crest(c.emblem)}${esc(c.name)}</span>`)
+      .join("");
+
+    const coach = t.coach || {};
+    const coachAge = ageFrom(coach.dateOfBirth);
+    const coachLine = coach.name
+      ? [coach.name, coach.nationality, coachAge != null ? `${coachAge} yrs` : ""].filter(Boolean).join(" · ")
+      : null;
+    const contract = coach.contract?.until ? `${coach.contract.start || "?"} → ${coach.contract.until}` : null;
+    const site = t.website
+      ? `<a href="${esc(t.website)}" target="_blank" rel="noopener" style="color:var(--accent)">${esc(t.website.replace(/^https?:\/\//, ""))}</a>`
+      : null;
 
     openModal(`
       <div class="detail-header">
         ${crest(t.crest, t.name)}
         <div>
-          <h2>${t.name}</h2>
-          <div class="detail-meta">${t.area?.name || ""} · Founded ${t.founded || "—"}</div>
+          <h2>${esc(t.name)}</h2>
+          <div class="detail-meta">${esc([t.area?.name, t.tla, t.founded ? `Founded ${t.founded}` : ""].filter(Boolean).join(" · "))}</div>
         </div>
       </div>
+      ${comps ? `<div style="margin:.5rem 0">${comps}</div>` : ""}
       <div class="detail-grid">
-        <div class="detail-item"><div class="label">Stadium</div><div class="value">${t.venue || "—"}</div></div>
-        <div class="detail-item"><div class="label">Colors</div><div class="value">${t.clubColors || "—"}</div></div>
-        <div class="detail-item"><div class="label">Coach</div><div class="value">${t.coach?.name || "—"}</div></div>
-        <div class="detail-item"><div class="label">Website</div><div class="value">${t.website ? `<a href="${t.website}" target="_blank" rel="noopener" style="color:var(--accent)">Link</a>` : "—"}</div></div>
+        ${detailItem("Stadium", t.venue)}
+        ${detailItem("Colors", t.clubColors)}
+        ${detailItem("Address", t.address)}
+        ${detailItem("Coach", coachLine)}
+        ${detailItem("Coach contract", contract)}
+        ${detailItem("Website", site, true)}
+        ${detailItem("Squad size", squad.length || null)}
+        ${detailItem("Average age", avgAge)}
+        ${detailItem("Nationalities", nations.size || null)}
+        ${detailItem("Updated", t.lastUpdated ? formatDate(t.lastUpdated) : null)}
       </div>
+      <h3 class="section-title">Season form · all competitions</h3>
+      <div id="teamFormBox" data-for-team="${esc(t.id)}"><p class="empty">Loading matches…</p></div>
       ${squadHtml}
+      ${staffHtml}
       <div class="modal-actions">
-        <button class="btn-primary" id="btnTeamMatches">View matches</button>
+        <button class="btn-primary" id="btnTeamMatches">View all matches</button>
         <button class="btn-outline" id="btnToggleFav">${favActive ? "♥ Remove favorite" : "♡ Favorite team"}</button>
       </div>
     `);
@@ -863,11 +1294,24 @@ async function showTeam(id) {
       });
     });
 
+    // Same request as "View all matches", so the second use is served from cache.
+    const teamMatchesParams = { type: "teamMatches", id };
+
+    api(teamMatchesParams)
+      .then((d) => {
+        const box = document.getElementById("teamFormBox");
+        if (box && box.dataset.forTeam === String(t.id)) fillTeamForm(box, t, d.matches || []);
+      })
+      .catch((e) => {
+        const box = document.getElementById("teamFormBox");
+        if (box && box.dataset.forTeam === String(t.id)) box.innerHTML = `<div class="error">${esc(e.message)}</div>`;
+      });
+
     document.getElementById("btnTeamMatches")?.addEventListener("click", async () => {
       closeModal();
       try {
-        const m = await api({ type: "teamMatches", id, limit: 15 });
-        renderMatches({ matches: m.matches }, `Matches · ${t.shortName || t.name}`);
+        const m = await api(teamMatchesParams);
+        renderMatches({ matches: m.matches, resultSet: m.resultSet }, `Matches · ${t.shortName || t.name}`, teamMatchesParams);
         currentTab = "matches";
         document.querySelectorAll(".nav-item[data-tab]").forEach((tb) =>
           tb.classList.toggle("active", tb.dataset.tab === "matches")
@@ -891,55 +1335,167 @@ async function showTeam(id) {
   }
 }
 
+function eventMinute(e) {
+  if (e.minute == null) return "";
+  return `${e.minute}${e.injuryTime ? "+" + e.injuryTime : ""}'`;
+}
+
+function lineupHtml(team) {
+  if (!team || (!team.lineup?.length && !team.bench?.length && !team.formation)) return "";
+  const player = (p) =>
+    `<div class="squad-item" data-person-id="${esc(p.id)}"><span>${p.shirtNumber != null ? esc(p.shirtNumber) + " · " : ""}${esc(p.name)}</span><span class="squad-pos">${esc(p.position || "")}</span></div>`;
+  return `
+    <div>
+      <h4 class="squad-group">${esc(team.shortName || team.name)}${team.formation ? ` · ${esc(team.formation)}` : ""}</h4>
+      ${team.coach?.name ? `<div class="event-sub">Coach: ${esc(team.coach.name)}</div>` : ""}
+      <div class="squad-list">${(team.lineup || []).map(player).join("")}</div>
+      ${team.bench?.length ? `<h4 class="squad-group">Bench</h4><div class="squad-list">${team.bench.map(player).join("")}</div>` : ""}
+    </div>`;
+}
+
 async function showMatch(id) {
   try {
     const m = await api({ type: "match", id });
     const home = m.homeTeam?.name || "—";
     const away = m.awayTeam?.name || "—";
-    const scoreH = m.score?.fullTime?.home ?? m.score?.fullTime?.homeTeam ?? "–";
-    const scoreA = m.score?.fullTime?.away ?? m.score?.fullTime?.awayTeam ?? "–";
+    const ft = m.score?.fullTime || {};
+    const scoreH = ft.home ?? ft.homeTeam ?? "–";
+    const scoreA = ft.away ?? ft.awayTeam ?? "–";
+    const breakdown = scoreBreakdown(m);
+    const winnerName =
+      m.score?.winner === "HOME_TEAM" ? home : m.score?.winner === "AWAY_TEAM" ? away : m.score?.winner === "DRAW" ? "Draw" : null;
+
+    const refs = (m.referees || [])
+      .map((r) => [r.name, r.type ? prettyEnum(r.type) : "", r.nationality].filter(Boolean).join(" · "))
+      .join("; ");
+    const odds = m.odds && m.odds.homeWin != null ? `${m.odds.homeWin} / ${m.odds.draw} / ${m.odds.awayWin}` : null;
+    const season = m.season || {};
+
+    const goals = m.goals || [];
+    const bookings = m.bookings || [];
+    const subs = m.substitutions || [];
+    const hasLineups = lineupHtml(m.homeTeam) || lineupHtml(m.awayTeam);
+
+    const goalsHtml = goals.length
+      ? `<h3 class="section-title">Goals</h3>` +
+        goals
+          .map(
+            (g) => `
+        <div class="event-row">
+          <span class="event-min">${esc(eventMinute(g))}</span>
+          <div>
+            <strong>${esc(g.scorer?.name || "—")}</strong>${g.type && g.type !== "REGULAR" ? ` <span class="tag">${esc(prettyEnum(g.type))}</span>` : ""}
+            <div class="event-sub">${esc(g.team?.shortName || g.team?.name || "")}${g.assist?.name ? ` · assist ${esc(g.assist.name)}` : ""}${g.score ? ` · ${esc(g.score.home)}–${esc(g.score.away)}` : ""}</div>
+          </div>
+        </div>`
+          )
+          .join("")
+      : "";
+
+    const bookingsHtml = bookings.length
+      ? `<h3 class="section-title">Cards</h3>` +
+        bookings
+          .map(
+            (b) => `
+        <div class="event-row">
+          <span class="event-min">${esc(eventMinute(b))}</span>
+          <div>
+            <strong>${esc(b.player?.name || "—")}</strong> <span class="tag">${esc(prettyEnum(b.card))}</span>
+            <div class="event-sub">${esc(b.team?.shortName || b.team?.name || "")}</div>
+          </div>
+        </div>`
+          )
+          .join("")
+      : "";
+
+    const subsHtml = subs.length
+      ? `<h3 class="section-title">Substitutions</h3>` +
+        subs
+          .map(
+            (s) => `
+        <div class="event-row">
+          <span class="event-min">${esc(eventMinute(s))}</span>
+          <div>
+            <strong>${esc(s.playerIn?.name || "—")}</strong> in · ${esc(s.playerOut?.name || "—")} out
+            <div class="event-sub">${esc(s.team?.shortName || s.team?.name || "")}</div>
+          </div>
+        </div>`
+          )
+          .join("")
+      : "";
+
+    const noEvents =
+      m.status === "FINISHED" && !goals.length && !bookings.length && !subs.length && !hasLineups
+        ? `<p class="note">Goals, cards and lineups are only returned by the API for some competitions and plans.</p>`
+        : "";
 
     openModal(`
       <div style="text-align:center;margin-bottom:1.25rem">
-        <div class="detail-meta">${m.competition?.name || ""} · ${formatDate(m.utcDate)}</div>
+        <div class="detail-meta">${esc(m.competition?.name || "")}${m.area?.name ? ` · ${esc(m.area.name)}` : ""} · ${formatDate(m.utcDate)}</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:1.5rem;margin:1rem 0">
           <div style="text-align:center">
             ${crest(m.homeTeam?.crest)}
-            <div style="font-weight:600;margin-top:0.35rem;font-size:0.9rem">${home}</div>
+            <div style="font-weight:600;margin-top:0.35rem;font-size:0.9rem">${esc(home)}</div>
           </div>
           <div style="font-size:1.75rem;font-weight:700">${scoreH} × ${scoreA}</div>
           <div style="text-align:center">
             ${crest(m.awayTeam?.crest)}
-            <div style="font-weight:600;margin-top:0.35rem;font-size:0.9rem">${away}</div>
+            <div style="font-weight:600;margin-top:0.35rem;font-size:0.9rem">${esc(away)}</div>
           </div>
         </div>
         ${statusBadge(m.status)}
         ${m.matchday ? `<span style="margin-left:0.5rem;font-size:0.8rem;color:var(--text-muted)">MD ${m.matchday}</span>` : ""}
+        ${breakdown.length ? `<div class="match-extra">${esc(breakdown.join(" · "))}</div>` : ""}
       </div>
       <div class="detail-grid">
-        <div class="detail-item"><div class="label">Venue</div><div class="value">${m.venue || "—"}</div></div>
-        <div class="detail-item"><div class="label">Referee</div><div class="value">${m.referees?.[0]?.name || "—"}</div></div>
+        ${detailItem("Venue", m.venue)}
+        ${detailItem("Referees", refs)}
+        ${detailItem("Stage", prettyEnum(m.stage))}
+        ${detailItem("Group", prettyEnum(m.group))}
+        ${detailItem("Winner", winnerName)}
+        ${detailItem("Result type", prettyEnum(m.score?.duration))}
+        ${detailItem("Season", season.startDate ? `${formatDay(season.startDate)} – ${formatDay(season.endDate)}` : null)}
+        ${detailItem("Odds (H / D / A)", odds)}
+        ${detailItem("Updated", m.lastUpdated ? formatDate(m.lastUpdated) : null)}
       </div>
+      ${goalsHtml}${bookingsHtml}${subsHtml}
+      ${hasLineups ? `<h3 class="section-title">Lineups</h3><div class="lineup-cols">${lineupHtml(m.homeTeam)}${lineupHtml(m.awayTeam)}</div>` : ""}
+      ${noEvents}
       <button class="btn-primary" id="btnH2H">View Head-to-Head</button>
+      <div id="h2hBox"></div>
     `);
 
+    modalBody.querySelectorAll("[data-person-id]").forEach((el) => {
+      el.addEventListener("click", () => {
+        closeModal();
+        showPerson(el.dataset.personId);
+      });
+    });
+
     document.getElementById("btnH2H")?.addEventListener("click", async () => {
+      const box = document.getElementById("h2hBox");
+      if (!box) return;
       try {
-        const h2h = await api({ type: "head2head", id, limit: 8 });
-        const matches = h2h.matches || h2h.head2head?.matches || [];
-        const list = matches
-          .map((x) => {
-            const sH = x.score?.fullTime?.home ?? "–";
-            const sA = x.score?.fullTime?.away ?? "–";
-            return `<div style="padding:0.4rem 0;border-bottom:1px solid var(--border);font-size:0.85rem">
-              ${x.homeTeam?.shortName || x.homeTeam?.name} ${sH}×${sA} ${x.awayTeam?.shortName || x.awayTeam?.name}
-              <span style="color:var(--text-muted);margin-left:0.5rem">${formatDate(x.utcDate)}</span>
-            </div>`;
-          })
-          .join("");
-        modalBody.innerHTML += `<h3 style="margin:1.25rem 0 0.5rem">Previous meetings</h3>${list || "<p class='empty'>No history</p>"}`;
+        const h2h = await api({ type: "head2head", id, limit: 10 });
+        const list = h2h.matches || h2h.head2head?.matches || [];
+        const agg = h2h.aggregates || h2h.head2head?.aggregates;
+        const aggHtml = agg
+          ? `<div class="mini-grid">
+              ${detailItem("Meetings", agg.numberOfMatches)}
+              ${detailItem("Total goals", agg.totalGoals)}
+              ${detailItem(`${agg.homeTeam?.shortName || agg.homeTeam?.name || "Home"} wins`, agg.homeTeam?.wins)}
+              ${detailItem("Draws", agg.homeTeam?.draws)}
+              ${detailItem(`${agg.awayTeam?.shortName || agg.awayTeam?.name || "Away"} wins`, agg.awayTeam?.wins)}
+            </div>`
+          : "";
+        box.innerHTML = `
+          <h3 class="section-title">Previous meetings</h3>
+          ${aggHtml}
+          ${list.length ? `<div class="match-list">${list.map((x) => matchCardHtml(x, true)).join("")}</div>` : "<p class='empty'>No history</p>"}
+        `;
+        bindMatchCards(box);
       } catch (e) {
-        modalBody.innerHTML += `<div class="error">${e.message}</div>`;
+        box.innerHTML = `<div class="error">${esc(e.message)}</div>`;
       }
     });
   } catch (e) {
@@ -950,51 +1506,81 @@ async function showMatch(id) {
 async function showPerson(id) {
   try {
     const p = await api({ type: "person", id });
+    const age = ageFrom(p.dateOfBirth);
+    const team = p.currentTeam || {};
+    const contract = team.contract?.until ? `${team.contract.start || "?"} → ${team.contract.until}` : null;
+    const fullName = [p.firstName, p.lastName].filter(Boolean).join(" ");
 
     openModal(`
       <div class="detail-header">
+        ${crest(team.crest, team.name)}
         <div>
-          <h2>${p.name}</h2>
-          <div class="detail-meta">${p.position || p.role || ""} · ${p.nationality || ""}</div>
+          <h2>${esc(p.name)}</h2>
+          <div class="detail-meta">${esc([p.position || p.role, p.nationality, team.name].filter(Boolean).join(" · "))}</div>
         </div>
       </div>
       <div class="detail-grid">
-        <div class="detail-item"><div class="label">Born</div><div class="value">${p.dateOfBirth || "—"}</div></div>
-        <div class="detail-item"><div class="label">Shirt</div><div class="value">${p.shirtNumber ?? "—"}</div></div>
-        <div class="detail-item"><div class="label">Current team</div><div class="value">${p.currentTeam?.name || "—"}</div></div>
-        <div class="detail-item"><div class="label">Updated</div><div class="value">${formatDate(p.lastUpdated)}</div></div>
+        ${detailItem("Full name", fullName && fullName !== p.name ? fullName : null)}
+        ${detailItem("Born", p.dateOfBirth ? `${formatDay(p.dateOfBirth)}${age != null ? ` (${age} yrs)` : ""}` : null)}
+        ${detailItem("Nationality", p.nationality)}
+        ${detailItem("Position", p.position)}
+        ${detailItem("Section", prettyEnum(p.section))}
+        ${detailItem("Shirt", p.shirtNumber)}
+        ${detailItem("Current team", team.name)}
+        ${detailItem("Team country", team.area?.name)}
+        ${detailItem("Contract", contract)}
+        ${detailItem("Updated", p.lastUpdated ? formatDate(p.lastUpdated) : null)}
       </div>
-      <button class="btn-primary" id="btnPersonMatches">View matches</button>
+      <button class="btn-primary" id="btnPersonMatches">View matches &amp; stats</button>
+      <div id="personBox"></div>
     `);
 
+    const teamCrest = modalBody.querySelector(".detail-header .crest");
+    if (teamCrest && team.id) {
+      teamCrest.style.cursor = "pointer";
+      teamCrest.addEventListener("click", () => {
+        closeModal();
+        showTeam(team.id);
+      });
+    }
+
     document.getElementById("btnPersonMatches")?.addEventListener("click", async () => {
+      const box = document.getElementById("personBox");
+      if (!box) return;
       try {
-        const m = await api({ type: "personMatches", id, limit: 12 });
-        const matches = m.matches || [];
-        const list = matches
-          .map((x) => {
-            const sH = x.score?.fullTime?.home ?? "–";
-            const sA = x.score?.fullTime?.away ?? "–";
-            return `<div style="padding:0.4rem 0;border-bottom:1px solid var(--border);font-size:0.85rem">
-              ${x.homeTeam?.shortName || "—"} ${sH}×${sA} ${x.awayTeam?.shortName || "—"}
-              <span style="color:var(--text-muted);margin-left:0.5rem">${formatDate(x.utcDate)}</span>
-            </div>`;
-          })
+        const m = await api({ type: "personMatches", id, limit: 50 });
+        const matches = [...(m.matches || [])]
+          .sort((a, b) => new Date(b.utcDate) - new Date(a.utcDate))
+          .slice(0, 15);
+
+        const labels = {
+          numberOfMatches: "Matches",
+          startingXI: "Starting XI",
+          minutesPlayed: "Minutes",
+          goals: "Goals",
+          ownGoals: "Own goals",
+          assists: "Assists",
+          penalties: "Penalties",
+          subbedIn: "Subbed in",
+          subbedOut: "Subbed out",
+          yellowCards: "Yellow cards",
+          yellowRedCards: "Yellow-red",
+          redCards: "Red cards",
+        };
+        const agg = m.aggregations || {};
+        const aggHtml = Object.keys(labels)
+          .filter((k) => agg[k] != null)
+          .map((k) => detailItem(labels[k], agg[k]))
           .join("");
 
-        modalBody.innerHTML += `
-          <h3 style="margin:1.25rem 0 0.5rem">Recent matches</h3>
-          ${list || "<p class='empty'>No data</p>"}
-          ${
-            m.aggregations
-              ? `<p style="margin-top:0.75rem;font-size:0.8rem;color:var(--text-muted)">
-            Goals: ${m.aggregations.goals ?? 0} · Assists: ${m.aggregations.assists ?? 0} · Minutes: ${m.aggregations.minutesPlayed ?? 0}
-          </p>`
-              : ""
-          }
+        box.innerHTML = `
+          ${aggHtml ? `<h3 class="section-title">Stats</h3><div class="mini-grid">${aggHtml}</div>` : ""}
+          <h3 class="section-title">Recent matches</h3>
+          ${matches.length ? `<div class="match-list">${matches.map((x) => matchCardHtml(x, true)).join("")}</div>` : "<p class='empty'>No data</p>"}
         `;
+        bindMatchCards(box);
       } catch (e) {
-        modalBody.innerHTML += `<div class="error">${e.message}</div>`;
+        box.innerHTML = `<div class="error">${esc(e.message)}</div>`;
       }
     });
   } catch (e) {
@@ -1015,11 +1601,15 @@ async function loadTab(tab) {
       const data = await api({ type: "standings", comp: currentComp });
       renderStandings(data);
     } else if (tab === "scorers") {
-      const data = await api({ type: "scorers", comp: currentComp });
+      const data = await api({ type: "scorers", comp: currentComp, limit: 50 });
       renderScorers(data);
     } else if (tab === "matches") {
       const data = await api({ type: "matches", comp: currentComp, status: "SCHEDULED,TIMED" });
-      renderMatches(data, `Matches · ${compSelect.options[compSelect.selectedIndex].text}`);
+      renderMatches(
+        data,
+        `Matches · ${compSelect.options[compSelect.selectedIndex].text}`,
+        { type: "matches", comp: currentComp, status: "SCHEDULED,TIMED" }
+      );
     } else if (tab === "teams") {
       const data = await api({ type: "teams", comp: currentComp });
       renderTeams(data);
@@ -1045,6 +1635,7 @@ document.getElementById("mainTabs").addEventListener("click", (e) => {
 
 compSelect.addEventListener("change", () => {
   currentComp = compSelect.value;
+  standingsView = "TOTAL";
   cache = {};
   const keep = currentTab === "today" || currentTab === "search" ? "standings" : currentTab;
   loadTab(keep);
@@ -1186,7 +1777,7 @@ if (notificationsButton) {
 // Configure a URL e a chave publicável do Supabase abaixo.
 // NUNCA coloque a chave service_role neste arquivo.
 
-const SUPABASE_URL = "https://pupcggbdnmurrflcizkf.supabase.co/rest/v1/";
+const SUPABASE_URL = "https://pupcggbdnmurrflcizkf.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_eRIUE5Kw2x_poM3N7dg6TQ_4UsfscN-";
 
 let supabaseClient = null;
